@@ -13,6 +13,8 @@ describe("ArbitrableEscrowUpgradeable", function () {
     const ArbitrableEscrowUpgradeable = await ethers.getContractFactory("ArbitrableEscrowUpgradeable");
     const arbitrableEscrowUpgradeable = await ArbitrableEscrowUpgradeable.deploy();
 
+    await arbitrableEscrowUpgradeable.deployed();
+
     return { arbitrableEscrowUpgradeable, owner, founderAccount, payeeAccount };
   }
 
@@ -23,7 +25,19 @@ describe("ArbitrableEscrowUpgradeable", function () {
     const ArbitrableEscrowFactoryUpgradeable = await ethers.getContractFactory("ArbitrableEscrowFactoryUpgradeable");
     const arbitrableEscrowFactoryUpgradeable = await ArbitrableEscrowFactoryUpgradeable.deploy(address);
 
+    await arbitrableEscrowFactoryUpgradeable.deployed();
+
     return { arbitrableEscrowFactoryUpgradeable, owner, founderAccount, payeeAccount };
+  }
+
+  async function deployClonedEscrowFixture() {
+    // Contracts are deployed using the first signer/account by default
+    const { arbitrableEscrowUpgradeable } = await loadFixture(deployEscrowFixture);
+    const { arbitrableEscrowFactoryUpgradeable, owner, founderAccount, payeeAccount } = await loadFixture(() => deployEscrowFactoryFixture(arbitrableEscrowUpgradeable.address));
+
+    const clonedEscrow = await arbitrableEscrowFactoryUpgradeable.createEscrow(payeeAccount.address);
+
+    return { clonedEscrow, owner, founderAccount, payeeAccount };
   }
 
   describe("Deployment", function () {
@@ -37,13 +51,26 @@ describe("ArbitrableEscrowUpgradeable", function () {
     it("Base contract should not be initialized", async function () {
       const { arbitrableEscrowUpgradeable, founderAccount, payeeAccount } = await loadFixture(deployEscrowFixture);
 
-      //const { arbitrableEscrowFactoryUpgradeable } = await loadFixture(() => deployEscrowFactoryFixture(arbitrableEscrowUpgradeable.address));
-
       expect(arbitrableEscrowUpgradeable.initialize(payeeAccount.address, founderAccount.address)).to.be.reverted;
     });
 
-    // it("Should receive and store the funds to lock", async function () {
-    //   const { lock, lockedAmount } = await loadFixture(deployFixture);
+    it("Should be able to clone escrow via factory", async function () {
+      const { clonedEscrow } = await loadFixture(deployClonedEscrowFixture);
+
+      expect(clonedEscrow).not.to.be.reverted;
+    });
+
+    it("Should set correct roles when cloning escrow", async function () {
+      const { clonedEscrow, owner, founderAccount, payeeAccount } = await loadFixture(deployClonedEscrowFixture);
+
+      //const adminRole = await clonedEscrow.DEFAULT_ADMIN_ROLE();
+    });
+
+    // it("Should set appropriate roles when initialized", async function () {
+    //   const { arbitrableEscrowUpgradeable} = await loadFixture(deployEscrowFixture);
+    //   const { arbitrableEscrowFactoryUpgradeable } = await loadFixture(() => deployEscrowFactoryFixture(arbitrableEscrowUpgradeable.address));
+
+    //   const clonedEscrow = await arbitrableEscrowFactoryUpgradeable.createEscrow(arbitrableEscrowUpgradeable.address, arbitrableEscrowUpgradeable.address);
 
     //   expect(await ethers.provider.getBalance(lock.address)).to.equal(lockedAmount);
     // });

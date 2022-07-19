@@ -6,7 +6,7 @@ import "hardhat/console.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
 import "./ArbitrableEscrowUpgradeable.sol";
 
-contract ArbitrableEscrowUpgradeableFactory is ContextUpgradeable {
+contract ArbitrableEscrowFactoryUpgradeable is ContextUpgradeable {
     address public arbitrableEscrowAddress;
     
     event EscrowCreated(address indexed founder, address indexed payee, ArbitrableEscrowUpgradeable escrow);
@@ -17,7 +17,7 @@ contract ArbitrableEscrowUpgradeableFactory is ContextUpgradeable {
         arbitrableEscrowAddress = _arbitrableEscrowAddress;
     }
 
-    function createEscrow(address payable initialPayee) public {
+    function createEscrow(address payable initialPayee) public returns (ArbitrableEscrowUpgradeable) {
         require(arbitrableEscrowAddress != address(0), "Escrow contract does not exist");
 
         console.log('Factory msg.sender:', msg.sender);
@@ -28,6 +28,8 @@ contract ArbitrableEscrowUpgradeableFactory is ContextUpgradeable {
         deployedEscrows[msg.sender].push(newEscrow);
 
         emit EscrowCreated(msg.sender, initialPayee, newEscrow);
+
+        return newEscrow;
     }
 
     function escrowsOf(address _owner) external view returns (ArbitrableEscrowUpgradeable[] memory) {
