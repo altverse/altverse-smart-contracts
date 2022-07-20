@@ -17,7 +17,7 @@ contract ArbitrableEscrowFactoryUpgradeable is ContextUpgradeable {
         arbitrableEscrowAddress = _arbitrableEscrowAddress;
     }
 
-    function createEscrow(address payable initialPayee) public returns (ArbitrableEscrowUpgradeable) {
+    function createEscrow(address payable initialPayee) public {
         require(arbitrableEscrowAddress != address(0), "Escrow contract does not exist");
 
         console.log('Factory msg.sender:', msg.sender);
@@ -28,8 +28,6 @@ contract ArbitrableEscrowFactoryUpgradeable is ContextUpgradeable {
         deployedEscrows[msg.sender].push(newEscrow);
 
         emit EscrowCreated(msg.sender, initialPayee, newEscrow);
-
-        return newEscrow;
     }
 
     function escrowsOf(address _owner) external view returns (ArbitrableEscrowUpgradeable[] memory) {
