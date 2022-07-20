@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
@@ -14,7 +14,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
  * @dev Base escrow contract, holds funds designated for a payee until they
  * withdraw them.
  */
-contract RoleBasedEscrowUpgradeable is Initializable, AccessControlUpgradeable {
+contract RoleBasedEscrowUpgradeable is Initializable, AccessControlEnumerableUpgradeable  {
     bytes32 public constant FACTORY_ROLE = keccak256("FACTORY_ROLE");
     bytes32 public constant FOUNDER_ROLE = keccak256("FOUNDER_ROLE");
     bytes32 public constant PAYEE_ROLE = keccak256("PAYEE_ROLE");
