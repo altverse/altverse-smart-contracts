@@ -8,44 +8,50 @@ describe("ArbitrableEscrowUpgradeable", function () {
   // and reset Hardhat Network to that snapshopt in every test.
   async function deployEscrowFixture() {
     // Contracts are deployed using the first signer/account by default
-    const [owner, founderAccount, payeeAccount] = await ethers.getSigners();
+    const [founderAccount, payeeAccount] = await ethers.getSigners();
 
     const ArbitrableEscrowUpgradeable = await ethers.getContractFactory("ArbitrableEscrowUpgradeable");
     const arbitrableEscrowUpgradeable = await ArbitrableEscrowUpgradeable.deploy();
 
     await arbitrableEscrowUpgradeable.deployed();
 
-    return { arbitrableEscrowUpgradeable, owner, founderAccount, payeeAccount };
+    return { arbitrableEscrowUpgradeable, founderAccount, payeeAccount };
   }
 
   async function deployEscrowFactoryFixture(address: string) {
     // Contracts are deployed using the first signer/account by default
-    const [owner, founderAccount, payeeAccount] = await ethers.getSigners();
+    const [founderAccount, payeeAccount] = await ethers.getSigners();
 
     const ArbitrableEscrowFactoryUpgradeable = await ethers.getContractFactory("ArbitrableEscrowFactoryUpgradeable");
     const arbitrableEscrowFactoryUpgradeable = await ArbitrableEscrowFactoryUpgradeable.deploy(address);
 
     await arbitrableEscrowFactoryUpgradeable.deployed();
 
-    return { arbitrableEscrowFactoryUpgradeable, owner, founderAccount, payeeAccount };
+    return { arbitrableEscrowFactoryUpgradeable, founderAccount, payeeAccount };
   }
 
   async function deployClonedEscrowFixture() {
     // Contracts are deployed using the first signer/account by default
     const { arbitrableEscrowUpgradeable } = await loadFixture(deployEscrowFixture);
-    const { arbitrableEscrowFactoryUpgradeable, owner, founderAccount, payeeAccount } = await loadFixture(() => deployEscrowFactoryFixture(arbitrableEscrowUpgradeable.address));
+    const { arbitrableEscrowFactoryUpgradeable, founderAccount, payeeAccount } = await loadFixture(() => deployEscrowFactoryFixture(arbitrableEscrowUpgradeable.address));
 
-    const clonedEscrow = await arbitrableEscrowFactoryUpgradeable.createEscrow(payeeAccount.address);
+    const tx = await arbitrableEscrowFactoryUpgradeable.createEscrow(payeeAccount.address);
+    const txReceipt = await tx.wait();
+    const event = txReceipt.events?.find((x) => {
+      return x.event == "EscrowCreated";
+    });
 
-    return { clonedEscrow, owner, founderAccount, payeeAccount };
+    const eventResult = event?.args;
+
+    return { arbitrableEscrowFactoryUpgradeable, tx, eventResult, founderAccount, payeeAccount };
   }
 
   describe("Deployment", function () {
     it("Should set the right owner", async function () {
-      const { arbitrableEscrowUpgradeable, owner } = await loadFixture(deployEscrowFixture);
+      const { arbitrableEscrowUpgradeable, founderAccount } = await loadFixture(deployEscrowFixture);
 
       const adminRole = await arbitrableEscrowUpgradeable.DEFAULT_ADMIN_ROLE();
-      expect(await arbitrableEscrowUpgradeable.hasRole(adminRole, owner.address)).to.true;
+      expect(await arbitrableEscrowUpgradeable.hasRole(adminRole, founderAccount.address)).to.true;
     });
 
     it("Base contract should not be initialized", async function () {
@@ -55,32 +61,28 @@ describe("ArbitrableEscrowUpgradeable", function () {
     });
 
     it("Should be able to clone escrow via factory", async function () {
-      const { clonedEscrow } = await loadFixture(deployClonedEscrowFixture);
+      const { tx } = await loadFixture(deployClonedEscrowFixture);
 
-      expect(clonedEscrow).not.to.be.reverted;
+      expect(tx).not.to.be.reverted;
     });
 
     it("Should set correct roles when cloning escrow", async function () {
-      const { clonedEscrow, owner, founderAccount, payeeAccount } = await loadFixture(deployClonedEscrowFixture);
+      const { arbitrableEscrowFactoryUpgradeable: factory, eventResult, founderAccount, payeeAccount } = await loadFixture(deployClonedEscrowFixture);
 
-      //const adminRole = await clonedEscrow.DEFAULT_ADMIN_ROLE();
+      const escrow = await ethers.getContractAt("ArbitrableEscrowUpgradeable", eventResult?.escrow);
+
+      const adminRole = await escrow.DEFAULT_ADMIN_ROLE();
+      expect(await escrow.hasRole(adminRole, factory.address)).to.be.true;
+
+      const factoryRole = await escrow.FACTORY_ROLE();
+      expect(await escrow.hasRole(factoryRole, factory.address)).to.be.true;
+
+      const founderRole = await escrow.FOUNDER_ROLE();
+      expect(await escrow.hasRole(founderRole, founderAccount.address)).to.be.true;
+
+      const payeeRole = await escrow.PAYEE_ROLE();
+      expect(await escrow.hasRole(payeeRole, payeeAccount.address)).to.be.true;
     });
-
-    // it("Should set appropriate roles when initialized", async function () {
-    //   const { arbitrableEscrowUpgradeable} = await loadFixture(deployEscrowFixture);
-    //   const { arbitrableEscrowFactoryUpgradeable } = await loadFixture(() => deployEscrowFactoryFixture(arbitrableEscrowUpgradeable.address));
-
-    //   const clonedEscrow = await arbitrableEscrowFactoryUpgradeable.createEscrow(arbitrableEscrowUpgradeable.address, arbitrableEscrowUpgradeable.address);
-
-    //   expect(await ethers.provider.getBalance(lock.address)).to.equal(lockedAmount);
-    // });
-
-    // it("Should fail if the unlockTime is not in the future", async function () {
-    //   // We don't use the fixture here because we want a different deployment
-    //   const latestTime = await time.latest();
-    //   const Lock = await ethers.getContractFactory("Lock");
-    //   await expect(Lock.deploy(latestTime, { value: 1 })).to.be.revertedWith("Unlock time should be in the future");
-    // });
   });
 
   //   describe("Withdrawals", function () {
