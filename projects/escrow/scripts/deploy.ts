@@ -1,13 +1,13 @@
 import { ethers } from "hardhat";
 
 async function main() {
-  const BaseContract = await ethers.getContractFactory("ArbitrableEscrowUpgradeable.sol");
+  const BaseContract = await ethers.getContractFactory("ArbitrableEscrowUpgradeable");
   const baseContract = await BaseContract.deploy();
   await baseContract.deployed();
 
   console.log("Base contract deployed to:", baseContract.address);
 
-  const Factory = await ethers.getContractFactory("ArbitrableEscrowFactoryUpgradeable.sol");
+  const Factory = await ethers.getContractFactory("ArbitrableEscrowFactoryUpgradeable");
   const facotry = await Factory.deploy(baseContract.address);
   await facotry.deployed();
 
