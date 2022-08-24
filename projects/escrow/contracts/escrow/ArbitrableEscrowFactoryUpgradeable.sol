@@ -6,11 +6,10 @@ import "hardhat/console.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/ClonesUpgradeable.sol";
 import "./ArbitrableEscrowUpgradeable.sol";
 
-contract ArbitrableEscrowUpgradeableFactory is ContextUpgradeable {
+contract ArbitrableEscrowFactoryUpgradeable is ContextUpgradeable {
     address public arbitrableEscrowAddress;
     
-    event EscrowCreatedByFunder(address indexed funder, address indexed payee, ArbitrableEscrowUpgradeable escrow);
-    event EscrowCreatedByPayee(address indexed funder, address indexed payee, ArbitrableEscrowUpgradeable escrow);
+    event EscrowCreated(address indexed creator, address indexed funder, address indexed payee, ArbitrableEscrowUpgradeable escrow);
 
     mapping(address => ArbitrableEscrowUpgradeable[]) public deployedEscrows;
 
@@ -21,25 +20,21 @@ contract ArbitrableEscrowUpgradeableFactory is ContextUpgradeable {
     function createEscrowAsFunder(address payee) public {
         require(arbitrableEscrowAddress != address(0), "Escrow contract does not exist");
 
-        console.log('Factory msg.sender:', msg.sender);
-
         ArbitrableEscrowUpgradeable newEscrow = ArbitrableEscrowUpgradeable(ClonesUpgradeable.clone(arbitrableEscrowAddress));
         newEscrow.initialize(msg.sender, payee);
         deployedEscrows[msg.sender].push(newEscrow);
 
-        emit EscrowCreatedByFunder(msg.sender, payee, newEscrow);
+        emit EscrowCreated(msg.sender, msg.sender, payee, newEscrow);
     }
 
     function createEscrowAsPayee(address funder) public {
         require(arbitrableEscrowAddress != address(0), "Escrow contract does not exist");
 
-        console.log('Factory msg.sender:', msg.sender);
-
         ArbitrableEscrowUpgradeable newEscrow = ArbitrableEscrowUpgradeable(ClonesUpgradeable.clone(arbitrableEscrowAddress));
         newEscrow.initialize(funder, msg.sender);
         deployedEscrows[msg.sender].push(newEscrow);
 
-        emit EscrowCreatedByPayee(funder, msg.sender, newEscrow);
+        emit EscrowCreated(msg.sender, funder, msg.sender, newEscrow);
     }
 
     function escrowsOf(address _owner) external view returns (ArbitrableEscrowUpgradeable[] memory) {

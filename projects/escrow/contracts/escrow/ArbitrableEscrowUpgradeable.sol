@@ -40,8 +40,6 @@ contract ArbitrableEscrowUpgradeable is Initializable, RoleBasedEscrowUpgradeabl
 
         __ArbitrableEscrow_init();
         __Escrow_init(funder, payee);
-
-        emit Initialized(funder, payee);
     }
 
     function requestArbitration() external onlyFunder onlyPayee {

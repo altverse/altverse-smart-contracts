@@ -24,7 +24,6 @@ contract RoleBasedEscrowUpgradeable is Initializable, AccessControlUpgradeable {
     bytes32 public constant FUNDER_ROLE = keccak256("FUNDER_ROLE");
     bytes32 public constant PAYEE_ROLE = keccak256("PAYEE_ROLE");
     
-    event Initialized(address indexed funder, address indexed payee);
     event Deposited(address indexed funder, IERC20 erc20Token, uint256 amount);
     event Withdrawn(address indexed payee, IERC20[] erc20Token, uint256[] amount);
     event PayeeRegistered(address indexed payee);
@@ -57,8 +56,7 @@ contract RoleBasedEscrowUpgradeable is Initializable, AccessControlUpgradeable {
         require(hasRole(FACTORY_ROLE, msg.sender) || hasRole(FUNDER_ROLE, msg.sender) || hasRole(PAYEE_ROLE, msg.sender), "RoleBasedEscrow: Only the participant can call this function.");
         _;
     }
-    
-
+   
     enum State {
         GENESIS,
         INITIALIZED, 
@@ -68,6 +66,7 @@ contract RoleBasedEscrowUpgradeable is Initializable, AccessControlUpgradeable {
 
     State internal _state;
 
+    
     IERC20[] fundedTokens;
     address[] public payees;
     address[] public funders;
@@ -80,8 +79,6 @@ contract RoleBasedEscrowUpgradeable is Initializable, AccessControlUpgradeable {
      * @dev Constructor.
      */
      constructor() {
-        console.log("constructor RoleBasedEscrow");
-
         // The base contract must not be initialized, since we are using clones.
         isBaseContract = true;
 
@@ -89,26 +86,14 @@ contract RoleBasedEscrowUpgradeable is Initializable, AccessControlUpgradeable {
 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(FACTORY_ROLE, msg.sender);
-        _setupRole(FUNDER_ROLE, msg.sender);
-        _setupRole(PAYEE_ROLE, msg.sender);
     }
 
     function __Escrow_init(address funder, address payee) internal onlyInitializing { 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(FACTORY_ROLE, msg.sender);
         
-        console.log(payee);
-        console.log(funder);
-
-        if (payee != address(0)) {
-            payees.push(payee);
-            _setupRole(PAYEE_ROLE, payee);
-        }
-
-        if (funder != address(0)) {
-            funders.push(funder);
-            _setupRole(FUNDER_ROLE, funder);
-        }
+        if (payee != address(0)) _registerPayee(payee);
+        if (funder != address(0)) _registerFunder(funder);
     }
 
     function __Escrow_init_unchained() internal onlyInitializing {
@@ -119,8 +104,6 @@ contract RoleBasedEscrowUpgradeable is Initializable, AccessControlUpgradeable {
         require(payee != funder, "ArbitrableEscrow: payee cannot be itself");
 
         __Escrow_init(funder, payee);
-
-        emit Initialized(funder, payee);
     }
 
     /**
@@ -128,25 +111,39 @@ contract RoleBasedEscrowUpgradeable is Initializable, AccessControlUpgradeable {
      */
     function registerAsPayee() public {
         require(state() < State.ACTIVE, "RoleBasedEscrow: can only deposit while INITIATED");
-        require(funderExist(msg.sender) == false, "RoleBasedEscrow: funder cannot be a payee");
 
-        payees.push(msg.sender);
-        _setupRole(PAYEE_ROLE, msg.sender);
-
-        emit PayeeRegistered(msg.sender);
+        _registerPayee(msg.sender);
     }
 
+    function _registerPayee(address payee) internal {
+        require(payee != address(0), "RoleBasedEscrow: payee address must not be empty");
+        require(payeeExist(payee) == false, "RoleBasedEscrow: cannot register twice as payee");
+        require(funderExist(payee) == false, "RoleBasedEscrow: funder cannot be a payee");
+        
+        payees.push(payee);
+        _setupRole(PAYEE_ROLE, payee);
+
+        emit PayeeRegistered(payee);
+    }
+    
     /**
-     * @dev Register payee
+     * @dev Register funder
      */
     function registerAsFunder() public {
         require(state() < State.ACTIVE, "RoleBasedEscrow: can only deposit while INITIATED");
-        require(payeeExist(msg.sender) == false, "RoleBasedEscrow: payee cannot be a funder");
 
-        funders.push(msg.sender);
-        _setupRole(FUNDER_ROLE, msg.sender);
+        _registerFunder(msg.sender);
+    }
 
-        emit FunderRegistered(msg.sender);
+    function _registerFunder(address funder) internal {
+        require(funder != address(0), "RoleBasedEscrow: funder address must not be empty");
+        require(funderExist(funder) == false, "RoleBasedEscrow: cannot register twice as funder");
+        require(payeeExist(funder) == false, "RoleBasedEscrow: payee cannot be a funder");
+
+        funders.push(funder);
+        _setupRole(FUNDER_ROLE, funder);
+
+        emit FunderRegistered(funder);
     }
 
     /**
