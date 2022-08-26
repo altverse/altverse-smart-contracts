@@ -1,5 +1,6 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
+import { parseEther } from "ethers/lib/utils";
 import { ethers } from "hardhat";
 
 const emptyAddress = "0x0000000000000000000000000000000000000000";
@@ -20,7 +21,7 @@ describe("ArbitrableEscrowUpgradeable", function () {
     return { arbitrableEscrowUpgradeable, factoryAccount, funderAccount, payeeAccount };
   }
 
-  async function deployEscrowFactoryFixture(address: string) {
+  async function deployEscrowFactoryFixtureWithFakeUSD(address: string) {
     // Contracts are deployed using the first signer/account by default
     const [factoryAccount, funderAccount, payeeAccount, otherAccount1, otherAccount2] = await ethers.getSigners();
 
@@ -29,18 +30,31 @@ describe("ArbitrableEscrowUpgradeable", function () {
 
     await arbitrableEscrowFactoryUpgradeable.deployed();
 
-    return { arbitrableEscrowFactoryUpgradeable, factoryAccount, funderAccount, payeeAccount, otherAccount1, otherAccount2 };
+    const { fakeUSDToken } = await deployFakeUSDFixture();
+
+    return { arbitrableEscrowFactoryUpgradeable, fakeUSDToken, factoryAccount, funderAccount, payeeAccount, otherAccount1, otherAccount2 };
   }
 
   async function deployEscrowFactoryFixtureWithAddress() {
-    // Contracts are deployed using the first signer/account by default
     const { arbitrableEscrowUpgradeable } = await deployEscrowFixture();
 
-    return deployEscrowFactoryFixture(arbitrableEscrowUpgradeable.address);
+    return deployEscrowFactoryFixtureWithFakeUSD(arbitrableEscrowUpgradeable.address);
+  }
+
+  async function deployFakeUSDFixture() {
+    // Contracts are deployed using the first signer/account by default
+    const [ownerAccount, funderAccount] = await ethers.getSigners();
+
+    const FakeUSDToken = await ethers.getContractFactory("ERC20FakeUSDToken");
+    const fakeUSDToken = await FakeUSDToken.deploy();
+
+    await fakeUSDToken.deployed();
+
+    return { fakeUSDToken, ownerAccount, funderAccount };
   }
 
   async function createFunderEscrow(presetPayee: boolean) {
-    const { arbitrableEscrowFactoryUpgradeable, factoryAccount, funderAccount, payeeAccount, otherAccount1, otherAccount2 } = await loadFixture(deployEscrowFactoryFixtureWithAddress);
+    const { arbitrableEscrowFactoryUpgradeable, fakeUSDToken, factoryAccount, funderAccount, payeeAccount, otherAccount1, otherAccount2 } = await loadFixture(deployEscrowFactoryFixtureWithAddress);
 
     const tx = await arbitrableEscrowFactoryUpgradeable.connect(funderAccount).createEscrowAsFunder(presetPayee ? payeeAccount.address : emptyAddress);
     const txReceipt = await tx.wait();
@@ -50,7 +64,7 @@ describe("ArbitrableEscrowUpgradeable", function () {
 
     const eventResult = event?.args;
 
-    return { arbitrableEscrowFactoryUpgradeable, tx, eventResult, factoryAccount, funderAccount, payeeAccount, otherAccount1, otherAccount2 };
+    return { arbitrableEscrowFactoryUpgradeable, tx, eventResult, fakeUSDToken, factoryAccount, funderAccount, payeeAccount, otherAccount1, otherAccount2 };
   }
 
   async function createPayeeEscrow(presetFunder: boolean) {
@@ -66,6 +80,13 @@ describe("ArbitrableEscrowUpgradeable", function () {
 
     return { arbitrableEscrowFactoryUpgradeable, tx, eventResult, factoryAccount, funderAccount, payeeAccount, otherAccount1, otherAccount2 };
   }
+
+  describe("FakeUSDToken", function () {
+    it("Should be able to transfer tokens", async function () {
+      const { fakeUSDToken, ownerAccount, funderAccount } = await loadFixture(deployFakeUSDFixture);
+      await expect(fakeUSDToken.transfer(funderAccount.address, 1000)).to.changeTokenBalances(fakeUSDToken, [ownerAccount, funderAccount], [-1000, 1000]);
+    });
+  });
 
   describe("Deployment", function () {
     it("Should set the right owner", async function () {
@@ -168,6 +189,32 @@ describe("ArbitrableEscrowUpgradeable", function () {
       expect(await escrow.hasRole(payeeRole, otherAccount2.address)).to.be.true;
     });
 
+    it("Should add into funders list when registered as funder", async function () {
+      // Funder creates.
+      const { eventResult: funderWithoutPayeeEventResult, funderAccount, otherAccount1 } = await createFunderEscrow(false);
+
+      const escrow = await ethers.getContractAt("ArbitrableEscrowUpgradeable", funderWithoutPayeeEventResult?.escrow);
+
+      expect(await escrow.funders(0)).to.be.equal(funderAccount.address);
+
+      // then another funder registers.
+      await escrow.connect(otherAccount1).registerAsFunder();
+      expect(await escrow.funders(1)).to.be.equal(otherAccount1.address);
+    });
+
+    it("Should add into payee list when registered as payee", async function () {
+      // Funder creates.
+      const { eventResult: funderWithoutPayeeEventResult, payeeAccount, otherAccount1 } = await createPayeeEscrow(false);
+
+      const escrow = await ethers.getContractAt("ArbitrableEscrowUpgradeable", funderWithoutPayeeEventResult?.escrow);
+
+      expect(await escrow.payees(0)).to.be.equal(payeeAccount.address);
+
+      // then another funder registers.
+      await escrow.connect(otherAccount1).registerAsPayee();
+      expect(await escrow.payees(1)).to.be.equal(otherAccount1.address);
+    });
+
     it("Should not be able to register both funder and payee (as funder)", async function () {
       // Funder creates.
       const { eventResult, funderAccount } = await createFunderEscrow(false);
@@ -207,23 +254,28 @@ describe("ArbitrableEscrowUpgradeable", function () {
       // then trying to be a payee again.
       await expect(escrow.connect(payeeAccount).registerAsPayee()).to.be.revertedWith("RoleBasedEscrow: cannot register twice as payee");
     });
+  });
 
-    it("Should emit FunderRegistered event when registering as funder", async function () {
-      const { eventResult, funderAccount } = await createPayeeEscrow(false);
-
+  describe("Deposits (Funding)", function () {
+    it("Should be able to deposit ERC20 tokens", async function () {
+      const { eventResult, fakeUSDToken, funderAccount } = await createFunderEscrow(false);
       const escrow = await ethers.getContractAt("ArbitrableEscrowUpgradeable", eventResult?.escrow);
 
-      await expect(escrow.connect(funderAccount).registerAsFunder()).to.emit(escrow, "FunderRegistered").withArgs(funderAccount.address);
+      const tx = await fakeUSDToken.transfer(funderAccount.address, 1000);
+      await tx.wait();
+
+      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, { value: parseEther("100") })).not.to.be.reverted;
+
+      expect(await fakeUSDToken.balanceOf(funderAccount.address)).to.equal(parseEther("900"));
     });
 
-    it("Should emit events when registering as payee", async function () {
-      const { eventResult, payeeAccount } = await createFunderEscrow(false);
-
+    it("Should revert deposit if there is insufficient at funder's wallet", async function () {
+      const { eventResult, fakeUSDToken, funderAccount } = await createFunderEscrow(false);
       const escrow = await ethers.getContractAt("ArbitrableEscrowUpgradeable", eventResult?.escrow);
-
-      await expect(escrow.connect(payeeAccount).registerAsPayee()).to.emit(escrow, "PayeeRegistered").withArgs(payeeAccount.address);
+      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, { value: parseEther("100") })).to.be.revertedWith("ERC20: transfer amount exceeds balance");
     });
   });
+
   //   describe("Withdrawals", function () {
   //     describe("Validations", function () {
   //       it("Should revert with the right error if called too soon", async function () {
@@ -252,15 +304,23 @@ describe("ArbitrableEscrowUpgradeable", function () {
   //       });
   //     });
 
-  //     describe("Events", function () {
-  //       it("Should emit an event on withdrawals", async function () {
-  //         const { lock, unlockTime, lockedAmount } = await loadFixture(deployOneYearLockFixture);
+  describe("Events", function () {
+    it("Should emit FunderRegistered event when registering as funder", async function () {
+      const { eventResult, funderAccount } = await createPayeeEscrow(false);
 
-  //         await time.increaseTo(unlockTime);
+      const escrow = await ethers.getContractAt("ArbitrableEscrowUpgradeable", eventResult?.escrow);
 
-  //         await expect(lock.withdraw()).to.emit(lock, "Withdrawal").withArgs(lockedAmount, anyValue); // We accept any value as `when` arg
-  //       });
-  //     });
+      await expect(escrow.connect(funderAccount).registerAsFunder()).to.emit(escrow, "FunderRegistered").withArgs(funderAccount.address);
+    });
+
+    it("Should emit PayeeRegistered event when registering as payee", async function () {
+      const { eventResult, payeeAccount } = await createFunderEscrow(false);
+
+      const escrow = await ethers.getContractAt("ArbitrableEscrowUpgradeable", eventResult?.escrow);
+
+      await expect(escrow.connect(payeeAccount).registerAsPayee()).to.emit(escrow, "PayeeRegistered").withArgs(payeeAccount.address);
+    });
+  });
 
   //     describe("Transfers", function () {
   //       it("Should transfer the funds to the owner", async function () {
