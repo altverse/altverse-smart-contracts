@@ -58,7 +58,6 @@ contract RoleBasedEscrowUpgradeable is Initializable, AccessControlUpgradeable {
     }
    
     enum State {
-        GENESIS,
         INITIALIZED, 
         ACTIVE, 
         FINALIZED
@@ -66,7 +65,7 @@ contract RoleBasedEscrowUpgradeable is Initializable, AccessControlUpgradeable {
 
     State internal _state;
 
-    
+
     IERC20[] fundedTokens;
     address[] public payees;
     address[] public funders;
@@ -94,6 +93,8 @@ contract RoleBasedEscrowUpgradeable is Initializable, AccessControlUpgradeable {
         
         if (payee != address(0)) _registerPayee(payee);
         if (funder != address(0)) _registerFunder(funder);
+
+        _state = State.INITIALIZED;
     }
 
     function __Escrow_init_unchained() internal onlyInitializing {
@@ -127,7 +128,8 @@ contract RoleBasedEscrowUpgradeable is Initializable, AccessControlUpgradeable {
     }
     
     /**
-     * @dev Register funder
+     * @dev Register funder. Since this does not add any fundings and funder needs to perform deposit again, 
+     * its usage is discouraged and use deposit function directly.
      */
     function registerAsFunder() public {
         require(state() < State.ACTIVE, "RoleBasedEscrow: can only deposit while INITIATED");
@@ -147,22 +149,24 @@ contract RoleBasedEscrowUpgradeable is Initializable, AccessControlUpgradeable {
     }
 
     /**
-     * @dev Deposit funds after the contract has initiated.
+     * @dev Deposit ERC20 compatible funds after the contract has initiated.
      * @param tokenAddress token to be deposited
-     * @param amount amount of token to be deposited
      */
-    function deposit(address tokenAddress, uint256 amount) external onlyFunder {
-        require(state() > State.GENESIS && state() <= State.ACTIVE, "RoleBasedEscrow: can only deposit after INITIATED");
-        require(amount > 0, "RoleBasedEscrow: Token amount must be greater than zero");
-        require(payeeExist(msg.sender) == false, "RoleBasedEscrow: Funder cannot be one of the payees");
-
+    function deposit(address tokenAddress) payable external {
+        require(state() >= State.INITIALIZED && state() <= State.ACTIVE, "RoleBasedEscrow: can only deposit after INITIATED");
+        require(msg.value > 0, "RoleBasedEscrow: Token amount must be greater than zero");
+ 
         IERC20 erc20Token = IERC20(tokenAddress);
+        console.log(msg.value);
+        erc20Token.safeIncreaseAllowance(msg.sender, msg.value);
+        erc20Token.safeTransferFrom(msg.sender, address(this), msg.value);
+
         _addTokenList(erc20Token);
         _addFunder(msg.sender);
 
-        funds[msg.sender][erc20Token] += amount;
+        funds[msg.sender][erc20Token] += msg.value;
 
-        emit Deposited(msg.sender, erc20Token, amount);
+        emit Deposited(msg.sender, erc20Token, msg.value);
     }
 
     /**
@@ -190,7 +194,7 @@ contract RoleBasedEscrowUpgradeable is Initializable, AccessControlUpgradeable {
             IERC20 token = fundedTokens[i];
             uint256 amount = funds[payee][token];
             if (amount > 0) {
-                token.safeTransferFrom(address(this), payee, amount);
+                token.transfer(payee, amount);
                 funds[payee][token] = 0;
 
                 tokenWithdrawn[tokenWithdrawn.length] = token;
@@ -306,7 +310,7 @@ contract RoleBasedEscrowUpgradeable is Initializable, AccessControlUpgradeable {
             }
         }
 
-        fundedTokens[fundedTokens.length] = token;
+        fundedTokens.push(token);
     }
 
     function _addFunder(address funder) private {
@@ -318,8 +322,7 @@ contract RoleBasedEscrowUpgradeable is Initializable, AccessControlUpgradeable {
         }
 
         // Add new funder on the list.
-        funders.push(funder);
-        _setupRole(FUNDER_ROLE, funder);
+        _registerFunder(funder);
     }
 
     /**
