@@ -3,25 +3,25 @@ pragma solidity >=0.7.0 <0.9.0;
 
 import "hardhat/console.sol";
 
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./RoleBasedEscrowUpgradeable.sol";
+import "./RoleBasedEscrow.sol";
 
 /**
  * @title ArbitrableEscrow
  * @dev Escrow that holds funds for a transaction between 2 parties. Arbiters can be allocated when a dispute has occurred.
- * @dev Intended usage: See {Escrow}. Same usage guidelines apply here.
+ * @dev Intended usage: See openzeppelin's {Escrow}. Same usage guidelines apply here.
  * @dev The owner account (that is, the contract that instantiates this
  * contract) may deposit, close the deposit period, and allow for either
  * withdrawal by the payee, or refunds to the depositors. 
  */
-contract ArbitrableEscrowUpgradeable is Initializable, RoleBasedEscrowUpgradeable  {
+contract ArbitrableEscrow is Initializable, RoleBasedEscrow  {
     using SafeERC20 for IERC20;
 
     event Disputed(address indexed caller);
 
-    bool public isInDispute = false;
+    bool public isInDispute;
     
     function __ArbitrableEscrow_init() internal onlyInitializing {
         __ArbitrableEscrow_init_unchained();

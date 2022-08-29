@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v4.7.0) (utils/escrow/Escrow.sol)
-
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -16,9 +14,9 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
  * @dev Base escrow contract, holds funds designated for a payee until they
  * withdraw them.
  */
-contract RoleBasedEscrowUpgradeable is Initializable, AccessControlUpgradeable {
+contract RoleBasedEscrow is Initializable, AccessControl {
     using SafeERC20 for IERC20;
-    using AddressUpgradeable for address payable;
+    using Address for address payable;
 
     bytes32 public constant FACTORY_ROLE = keccak256("FACTORY_ROLE");
     bytes32 public constant FUNDER_ROLE = keccak256("FUNDER_ROLE");
@@ -73,9 +71,10 @@ contract RoleBasedEscrowUpgradeable is Initializable, AccessControlUpgradeable {
 
     bool public isBaseContract;
     address private _factory;
-    
+
     /**
-     * @dev Constructor.
+     * @dev Constructor. 
+     *      Constructor must be removed if you want to use Upgradeable.
      */
      constructor() {
         // The base contract must not be initialized, since we are using clones.
@@ -86,7 +85,7 @@ contract RoleBasedEscrowUpgradeable is Initializable, AccessControlUpgradeable {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(FACTORY_ROLE, msg.sender);
     }
-
+    
     function __Escrow_init(address funder, address payee) internal onlyInitializing { 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(FACTORY_ROLE, msg.sender);
@@ -158,7 +157,7 @@ contract RoleBasedEscrowUpgradeable is Initializable, AccessControlUpgradeable {
  
         IERC20 erc20Token = IERC20(tokenAddress);
         erc20Token.safeTransferFrom(msg.sender, address(this), msg.value);
-        
+
         _addTokenList(erc20Token);
         _addFunder(msg.sender);
 
@@ -326,7 +325,7 @@ contract RoleBasedEscrowUpgradeable is Initializable, AccessControlUpgradeable {
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
-     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     * See https://docs.openzeppelin.com/contracts/4.x/#storage_gaps
      */
     uint256[49] private __gap;
 }
