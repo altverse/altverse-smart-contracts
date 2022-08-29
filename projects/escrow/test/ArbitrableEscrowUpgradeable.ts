@@ -261,18 +261,22 @@ describe("ArbitrableEscrowUpgradeable", function () {
       const { eventResult, fakeUSDToken, funderAccount } = await createFunderEscrow(false);
       const escrow = await ethers.getContractAt("ArbitrableEscrowUpgradeable", eventResult?.escrow);
 
-      const tx = await fakeUSDToken.transfer(funderAccount.address, 1000);
-      await tx.wait();
+      await fakeUSDToken.transfer(funderAccount.address, 1000);
 
-      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, { value: parseEther("100") })).not.to.be.reverted;
+      await fakeUSDToken.connect(funderAccount).approve(escrow.address, 100);
+      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, { value: 100 })).not.to.be.reverted;
 
-      expect(await fakeUSDToken.balanceOf(funderAccount.address)).to.equal(parseEther("900"));
+      expect(await fakeUSDToken.balanceOf(funderAccount.address)).to.equal("900");
     });
 
     it("Should revert deposit if there is insufficient at funder's wallet", async function () {
       const { eventResult, fakeUSDToken, funderAccount } = await createFunderEscrow(false);
       const escrow = await ethers.getContractAt("ArbitrableEscrowUpgradeable", eventResult?.escrow);
-      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, { value: parseEther("100") })).to.be.revertedWith("ERC20: transfer amount exceeds balance");
+
+      await fakeUSDToken.transfer(funderAccount.address, 1000);
+
+      await fakeUSDToken.connect(funderAccount).approve(escrow.address, 1100);
+      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, { value: 1100 })).to.be.revertedWith("ERC20: transfer amount exceeds balance");
     });
   });
 

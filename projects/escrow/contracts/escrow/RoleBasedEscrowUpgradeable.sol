@@ -157,10 +157,8 @@ contract RoleBasedEscrowUpgradeable is Initializable, AccessControlUpgradeable {
         require(msg.value > 0, "RoleBasedEscrow: Token amount must be greater than zero");
  
         IERC20 erc20Token = IERC20(tokenAddress);
-        console.log(msg.value);
-        erc20Token.safeIncreaseAllowance(msg.sender, msg.value);
         erc20Token.safeTransferFrom(msg.sender, address(this), msg.value);
-
+        
         _addTokenList(erc20Token);
         _addFunder(msg.sender);
 
