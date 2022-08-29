@@ -1,10 +1,11 @@
-import { ethers, upgrades } from "hardhat";
+import { ethers } from "hardhat";
 import "@openzeppelin/hardhat-upgrades";
 
-const emptyAddress = "0x0000000000000000000000000000000000000000";
-const altverseTestAddress = "0x4F1f9c9e62F8b36346CC2f633b33dc190DC54424";
-
 async function main() {
+  const [deployer] = await ethers.getSigners();
+
+  console.log("Deploying contracts with the account:", deployer.address);
+
   const BaseContract = await ethers.getContractFactory("ArbitrableEscrow");
   const baseContract = await BaseContract.deploy();
   await baseContract.deployed();
