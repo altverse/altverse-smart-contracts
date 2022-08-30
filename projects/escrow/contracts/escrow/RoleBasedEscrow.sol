@@ -191,7 +191,7 @@ contract RoleBasedEscrow is Initializable, AccessControl {
             }
         }
 
-        emit Withdrawn(msg.sender, tokenWithdrawn, amountWithdrawn);
+        emit Withdrawn(payee, tokenWithdrawn, amountWithdrawn);
     }
 
     function withdrawalAllowed(address) public view virtual returns (bool) {

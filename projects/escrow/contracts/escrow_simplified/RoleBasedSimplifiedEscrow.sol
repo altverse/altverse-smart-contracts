@@ -14,7 +14,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
  * @dev Base escrow contract, holds funds designated for a payee until they
  * withdraw them.
  */
-contract RoleBasedEscrow is Initializable, AccessControl {
+contract RoleBasedSimplifiedEscrow is Initializable, AccessControl {
     using SafeERC20 for IERC20;
     using Address for address payable;
 
@@ -23,7 +23,7 @@ contract RoleBasedEscrow is Initializable, AccessControl {
     bytes32 public constant PAYEE_ROLE = keccak256("PAYEE_ROLE");
     
     event Deposited(address indexed funder, IERC20 erc20Token, uint256 amount);
-    event Withdrawn(address indexed payee, IERC20[] erc20Token, uint256[] amount);
+    event Withdrawn(address indexed payee, IERC20 erc20Token, uint256 amount);
     event PayeeRegistered(address indexed payee);
     event FunderRegistered(address indexed funder);
     event ContractActivated(address indexed funder);
@@ -57,21 +57,16 @@ contract RoleBasedEscrow is Initializable, AccessControl {
     }
    
     enum State {
-        INITIALIZED, 
+        INITIALIZED,
         ACTIVATED, 
         FINALIZED
     }
 
     State internal _state;
 
-
-    IERC20[] fundedTokens;
-    address[] public payees;
-    address[] public funders;
-    mapping (address => mapping (IERC20 => uint256)) public funds;
-
+    IERC20 fund;
+    address payee;
     bool public isBaseContract;
-    address private _factory;
 
     /**
      * @dev Constructor. 
@@ -81,18 +76,16 @@ contract RoleBasedEscrow is Initializable, AccessControl {
         // The base contract must not be initialized, since we are using clones.
         isBaseContract = true;
 
-        _factory = msg.sender;
-
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(FACTORY_ROLE, msg.sender);
     }
     
-    function __Escrow_init(address funder, address payee) internal onlyInitializing { 
+    function __Escrow_init(address funderAddess, address payeeAddress) internal onlyInitializing { 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(FACTORY_ROLE, msg.sender);
         
-        if (payee != address(0)) _registerPayee(payee);
-        if (funder != address(0)) _registerFunder(funder);
+        if (payeeAddress != address(0)) _registerPayee(payeeAddress);
+        if (funderAddess != address(0)) _registerFunder(funderAddess);
 
         _state = State.INITIALIZED;
     }
@@ -100,11 +93,11 @@ contract RoleBasedEscrow is Initializable, AccessControl {
     function __Escrow_init_unchained() internal onlyInitializing {
     }
 
-    function initialize(address funder, address payee) public virtual initializer {
+    function initialize(address funderAddress, address payeeAddress) public virtual initializer {
         require(isBaseContract == false, "ArbitrableEscrow: The base contract cannot be initialized");
-        require(payee != funder, "ArbitrableEscrow: payee cannot be itself");
+        require(payeeAddress != funderAddress, "ArbitrableEscrow: payee cannot be itself");
 
-        __Escrow_init(funder, payee);
+        __Escrow_init(funderAddress, payeeAddress);
         __Escrow_init_unchained();
     }
 
@@ -117,23 +110,23 @@ contract RoleBasedEscrow is Initializable, AccessControl {
         _registerPayee(msg.sender);
     }
 
-    function _registerPayee(address payee) internal {
-        require(payee != address(0), "RoleBasedEscrow: payee address must not be empty");
-        require(payeeExist(payee) == false, "RoleBasedEscrow: cannot register twice as payee");
-        require(funderExist(payee) == false, "RoleBasedEscrow: funder cannot be a payee");
+    function _registerPayee(address payeeAddress) internal {
+        require(payeeAddress != address(0), "RoleBasedEscrow: payee address must not be empty");
+        require(payee != address(0), "RoleBasedEscrow: only one payee can exist");
         
-        payees.push(payee);
-        _setupRole(PAYEE_ROLE, payee);
+        payee = payeeAddress;
+        _setupRole(PAYEE_ROLE, payeeAddress);
 
-        emit PayeeRegistered(payee);
+        emit PayeeRegistered(payeeAddress);
     }
     
+    /**
+     * @dev This must not be called from external. Only one funder can exist.
+     */
     function _registerFunder(address funder) internal {
         require(funder != address(0), "RoleBasedEscrow: funder address must not be empty");
-        require(funderExist(funder) == false, "RoleBasedEscrow: cannot register twice as funder");
-        require(payeeExist(funder) == false, "RoleBasedEscrow: payee cannot be a funder");
+        require(funder != payee, "RoleBasedEscrow: payee cannot be a funder");
 
-        funders.push(funder);
         _setupRole(FUNDER_ROLE, funder);
 
         emit FunderRegistered(funder);
@@ -144,16 +137,15 @@ contract RoleBasedEscrow is Initializable, AccessControl {
      * @param tokenAddress token to be deposited
      */
     function deposit(address tokenAddress) payable external {
-        require(state() >= State.INITIALIZED && state() <= State.ACTIVATED, "RoleBasedEscrow: can only deposit after INITIATED");
+        require(state() < State.FINALIZED, "RoleBasedEscrow: can only deposit before FINALIZED");
         require(msg.value > 0, "RoleBasedEscrow: Token amount must be greater than zero");
- 
+        require(address(fund) == address(0) || address(fund) == tokenAddress, "RoleBasedEscrow: Can only deposit 1 token at once");
+        
         IERC20 erc20Token = IERC20(tokenAddress);
         erc20Token.safeTransferFrom(msg.sender, address(this), msg.value);
+        fund = erc20Token;
 
-        _addTokenList(erc20Token);
-        _addFunder(msg.sender);
-
-        funds[msg.sender][erc20Token] += msg.value;
+        _registerFunder(msg.sender);
 
         emit Deposited(msg.sender, erc20Token, msg.value);
     }
@@ -175,32 +167,30 @@ contract RoleBasedEscrow is Initializable, AccessControl {
         _withdraw(msg.sender);
     }
 
-    function _withdraw(address payee) private {
-        IERC20[] memory tokenWithdrawn = new IERC20[](fundedTokens.length);
-        uint256[] memory amountWithdrawn = new uint256[](fundedTokens.length);
+    function _withdraw(address payeeAddress) private {
+        uint256 amount = fund.balanceOf(address(this));
+        fund.transfer(payeeAddress, amount);
 
-        for (uint i = 0; i < fundedTokens.length; i++) {
-            IERC20 token = fundedTokens[i];
-            uint256 amount = funds[payee][token];
-            if (amount > 0) {
-                token.transfer(payee, amount);
-                funds[payee][token] = 0;
+        _state = State.FINALIZED;
 
-                tokenWithdrawn[i] = token;
-                amountWithdrawn[i] = amount;
-            }
-        }
-
-        emit Withdrawn(msg.sender, tokenWithdrawn, amountWithdrawn);
+        emit Withdrawn(payeeAddress, fund, amount);
     }
 
-    function withdrawalAllowed(address) public view virtual returns (bool) {
-        return state() == State.INITIALIZED || state() == State.FINALIZED;
+    function withdrawalAllowed(address wallet) public view virtual returns (bool) {
+        if (hasRole(FUNDER_ROLE, wallet)) {
+            return state() == State.INITIALIZED;
+        }
+        
+        if (hasRole(PAYEE_ROLE, wallet)) {
+            return state() == State.FINALIZED;
+        }
+
+        return false;
     }
 
     function activateContract() external virtual onlyFunder {
         require(state() == State.INITIALIZED, "RoleBasedEscrow: Escrow can be activated only after initialized");
-        require(payees.length > 0, "RoleBasedEscrow: There must be at least one payee");
+        require(payee != address(0), "RoleBasedEscrow: There must be at least one payee");
 
         _state = State.ACTIVATED;
 
@@ -219,45 +209,12 @@ contract RoleBasedEscrow is Initializable, AccessControl {
     function settle(bool autoWithdraw) public virtual onlyFactoryOrFunder {
         require(state() == State.ACTIVATED, "RoleBasedEscrow: Escrow can be finalized (settled) on ACTIVATED state only");
         
-        // For each token funded
-        for (uint tokenIndex = 0; tokenIndex < fundedTokens.length; tokenIndex++) {
-            IERC20 token = fundedTokens[tokenIndex];
-            uint256 totalAmountPerToken = _totalAmountOf(token, funders);
-
-            // Then distribute to payees equally
-            if (totalAmountPerToken > 0 && payees.length > 0) {
-                uint256 numberOfPayees = payees.length;
-                uint256 amountEach = numberOfPayees / totalAmountPerToken;
-
-                for (uint payeeIndex = 0; payeeIndex < payees.length; payeeIndex++) {
-                    address payee = payees[payeeIndex];
-                    funds[payee][token] = amountEach;             
-                    totalAmountPerToken -= amountEach;
-
-                    // Withdraw
-                    if (autoWithdraw) {
-                        _withdraw(payee);
-                    }
-                }
-
-                // TODO: Put leftover amount to Treasury
-                console.log("LeftOver: token - ", address(token));
-                console.log("LeftOver: totalAmountPerToken - ", totalAmountPerToken);
-            }
-        }
-
         _state = State.FINALIZED;
-    }
 
-
-    function _totalAmountOf(IERC20 token, address[] memory parties) private view returns (uint256) {
-        uint256 totalAmountPerToken = 0;
-        for (uint index = 0; index < parties.length; index++) {
-            address party = parties[index];
-            totalAmountPerToken += funds[party][token];
+        // Withdraw
+        if (autoWithdraw) {
+            _withdraw(payee);
         }
-
-        return totalAmountPerToken;
     }
 
     /**
@@ -265,47 +222,6 @@ contract RoleBasedEscrow is Initializable, AccessControl {
      */
     function state() public view virtual returns (State) {
         return _state;
-    }
-
-    function payeeExist(address payee) public view returns (bool) {
-        return _existingAddress(payees, payee);
-    }
-
-    function funderExist(address funder) public view returns (bool) {
-        return _existingAddress(funders, funder);
-    }
-
-    function _existingAddress(address[] memory array, address target) private pure returns (bool) {
-        for (uint i = 0; i < array.length; i++) {
-            if (array[i] == target) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    function _addTokenList(IERC20 token) private {
-        for (uint i = 0; i < fundedTokens.length; i++) {
-            if (fundedTokens[i] == token) {
-                fundedTokens[i] = token;
-                return;
-            }
-        }
-
-        fundedTokens.push(token);
-    }
-
-    function _addFunder(address funder) private {
-        for (uint i = 0; i < funders.length; i++) {
-            if (funders[i] == funder) {
-                // Already exist. Should not add on the list.
-                return;
-            }
-        }
-
-        // Add new funder on the list.
-        _registerFunder(funder);
     }
 
     /**
