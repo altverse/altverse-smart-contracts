@@ -1,0 +1,318 @@
+{
+  "manifestVersion": "3.2",
+  "admin": {
+    "address": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+    "txHash": "0x7c7e32e64746995c10538a48f35919fb967e5fb87905463fdc5c756e51b613a0"
+  },
+  "proxies": [
+    {
+      "address": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
+      "txHash": "0x60df9c8cbfc0f39044f36c7fc2eca366111a09257426fbe920fc152eb6597c5b",
+      "kind": "transparent"
+    },
+    {
+      "address": "0x0165878A594ca255338adfa4d48449f69242Eb8F",
+      "txHash": "0x3a15b7f7545f233065cab3ca9647331c3576b24b3fd2f94699bc3c60c462d806",
+      "kind": "transparent"
+    }
+  ],
+  "impls": {
+    "350070d100b7088e08de9806337bbd5ff76321ea93f34ffddab76a8ea0a7b074": {
+      "address": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+      "txHash": "0xa490dc7303e2e1aece754ddf16c96d8cad1d5ae540a6a1faa9e630eef5cd7f6d",
+      "layout": {
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:62",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:67"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\utils\\ContextUpgradeable.sol:36"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ERC165Upgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\utils\\introspection\\ERC165Upgradeable.sol:41"
+          },
+          {
+            "label": "_roles",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_mapping(t_bytes32,t_struct(RoleData)34_storage)",
+            "contract": "AccessControlUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\access\\AccessControlUpgradeable.sol:61"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "AccessControlUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\access\\AccessControlUpgradeable.sol:259"
+          },
+          {
+            "label": "_state",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_enum(State)2655",
+            "contract": "RoleBasedEscrowUpgradeable",
+            "src": "contracts\\escrow\\RoleBasedEscrowUpgradeable.sol:64"
+          },
+          {
+            "label": "fundedTokens",
+            "offset": 0,
+            "slot": "152",
+            "type": "t_array(t_contract(IERC20Upgradeable)1332)dyn_storage",
+            "contract": "RoleBasedEscrowUpgradeable",
+            "src": "contracts\\escrow\\RoleBasedEscrowUpgradeable.sol:67"
+          },
+          {
+            "label": "payees",
+            "offset": 0,
+            "slot": "153",
+            "type": "t_array(t_address)dyn_storage",
+            "contract": "RoleBasedEscrowUpgradeable",
+            "src": "contracts\\escrow\\RoleBasedEscrowUpgradeable.sol:68"
+          },
+          {
+            "label": "funders",
+            "offset": 0,
+            "slot": "154",
+            "type": "t_array(t_address)dyn_storage",
+            "contract": "RoleBasedEscrowUpgradeable",
+            "src": "contracts\\escrow\\RoleBasedEscrowUpgradeable.sol:69"
+          },
+          {
+            "label": "funds",
+            "offset": 0,
+            "slot": "155",
+            "type": "t_mapping(t_address,t_mapping(t_contract(IERC20Upgradeable)1332,t_uint256))",
+            "contract": "RoleBasedEscrowUpgradeable",
+            "src": "contracts\\escrow\\RoleBasedEscrowUpgradeable.sol:70"
+          },
+          {
+            "label": "isBaseContract",
+            "offset": 0,
+            "slot": "156",
+            "type": "t_bool",
+            "contract": "RoleBasedEscrowUpgradeable",
+            "src": "contracts\\escrow\\RoleBasedEscrowUpgradeable.sol:72"
+          },
+          {
+            "label": "_factory",
+            "offset": 1,
+            "slot": "156",
+            "type": "t_address",
+            "contract": "RoleBasedEscrowUpgradeable",
+            "src": "contracts\\escrow\\RoleBasedEscrowUpgradeable.sol:73"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "157",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "RoleBasedEscrowUpgradeable",
+            "src": "contracts\\escrow\\RoleBasedEscrowUpgradeable.sol:315"
+          },
+          {
+            "label": "isInDispute",
+            "offset": 0,
+            "slot": "206",
+            "type": "t_bool",
+            "contract": "ArbitrableEscrowUpgradeable",
+            "src": "contracts\\escrow\\ArbitrableEscrowUpgradeable.sol:24"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_address)dyn_storage": {
+            "label": "address[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_contract(IERC20Upgradeable)1332)dyn_storage": {
+            "label": "contract IERC20Upgradeable[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_bytes32": {
+            "label": "bytes32",
+            "numberOfBytes": "32"
+          },
+          "t_contract(IERC20Upgradeable)1332": {
+            "label": "contract IERC20Upgradeable",
+            "numberOfBytes": "20"
+          },
+          "t_enum(State)2655": {
+            "label": "enum RoleBasedEscrowUpgradeable.State",
+            "members": [
+              "INITIALIZED",
+              "ACTIVE",
+              "FINALIZED"
+            ],
+            "numberOfBytes": "1"
+          },
+          "t_mapping(t_address,t_bool)": {
+            "label": "mapping(address => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_mapping(t_contract(IERC20Upgradeable)1332,t_uint256))": {
+            "label": "mapping(address => mapping(contract IERC20Upgradeable => uint256))",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_bytes32,t_struct(RoleData)34_storage)": {
+            "label": "mapping(bytes32 => struct AccessControlUpgradeable.RoleData)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_contract(IERC20Upgradeable)1332,t_uint256)": {
+            "label": "mapping(contract IERC20Upgradeable => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_struct(RoleData)34_storage": {
+            "label": "struct AccessControlUpgradeable.RoleData",
+            "members": [
+              {
+                "label": "members",
+                "type": "t_mapping(t_address,t_bool)",
+                "offset": 0,
+                "slot": "0"
+              },
+              {
+                "label": "adminRole",
+                "type": "t_bytes32",
+                "offset": 0,
+                "slot": "1"
+              }
+            ],
+            "numberOfBytes": "64"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        }
+      }
+    },
+    "009f5d8bb3bb2d1888e4fe110ac4d90e128d4afc4f5d4a2e8cfe3bd3c12ccf02": {
+      "address": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
+      "txHash": "0xccdf51669ec85ae04abf69c7da54390223fa6981f47f5f204d00760a003dea12",
+      "layout": {
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:62",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:67"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin\\contracts-upgradeable\\utils\\ContextUpgradeable.sol:36"
+          },
+          {
+            "label": "arbitrableEscrowAddress",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_address",
+            "contract": "ArbitrableEscrowFactoryUpgradeable",
+            "src": "contracts\\escrow\\ArbitrableEscrowFactoryUpgradeable.sol:11"
+          },
+          {
+            "label": "deployedEscrows",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_mapping(t_address,t_array(t_contract(ArbitrableEscrowUpgradeable)2497)dyn_storage)",
+            "contract": "ArbitrableEscrowFactoryUpgradeable",
+            "src": "contracts\\escrow\\ArbitrableEscrowFactoryUpgradeable.sol:15"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_contract(ArbitrableEscrowUpgradeable)2497)dyn_storage": {
+            "label": "contract ArbitrableEscrowUpgradeable[]",
+            "numberOfBytes": "32"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(ArbitrableEscrowUpgradeable)2497": {
+            "label": "contract ArbitrableEscrowUpgradeable",
+            "numberOfBytes": "20"
+          },
+          "t_mapping(t_address,t_array(t_contract(ArbitrableEscrowUpgradeable)2497)dyn_storage)": {
+            "label": "mapping(address => contract ArbitrableEscrowUpgradeable[])",
+            "numberOfBytes": "32"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        }
+      }
+    }
+  }
+}
