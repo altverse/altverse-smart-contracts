@@ -16,7 +16,7 @@ import "./RoleBasedSimplifiedEscrow.sol";
  * contract) may deposit, close the deposit period, and allow for either
  * withdrawal by the payee, or refunds to the depositors. 
  */
-contract ArbitrableSimplifiedEscrow is Initializable, RoleBasedEscrow  {
+contract ArbitrableSimplifiedEscrow is Initializable, RoleBasedSimplifiedEscrow  {
     using SafeERC20 for IERC20;
 
     event Disputed(address indexed caller);
