@@ -28,7 +28,6 @@ contract RoleBasedEscrow is Initializable, AccessControl {
     event FunderRegistered(address indexed funder);
     event ContractActivated(address indexed funder);
     event ContractAccepted(address indexed payee);
-    event DeliveryConfirmed(address indexed confirmer);
 
     modifier onlyFactory() {
         require(hasRole(FACTORY_ROLE, msg.sender), "RoleBasedEscrow: Only the factory can call this function.");
