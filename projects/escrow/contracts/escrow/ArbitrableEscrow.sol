@@ -43,7 +43,7 @@ contract ArbitrableEscrow is Initializable, RoleBasedEscrow  {
     }
 
     function requestArbitration() external onlyFunder onlyPayee {
-        require(state() == State.ACTIVE, "ArbitrableEscrow: can only start arbitration while ACTIVE");
+        require(state() == State.ACTIVATED, "ArbitrableEscrow: can only start arbitration while ACTIVE");
 
         isInDispute = true;
 

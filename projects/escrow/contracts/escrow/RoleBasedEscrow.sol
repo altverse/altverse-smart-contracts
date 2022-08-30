@@ -26,6 +26,7 @@ contract RoleBasedEscrow is Initializable, AccessControl {
     event Withdrawn(address indexed payee, IERC20[] erc20Token, uint256[] amount);
     event PayeeRegistered(address indexed payee);
     event FunderRegistered(address indexed funder);
+    event ContractActivated(address indexed funder);
     event ContractAccepted(address indexed payee);
     event DeliveryConfirmed(address indexed confirmer);
 
@@ -57,7 +58,7 @@ contract RoleBasedEscrow is Initializable, AccessControl {
    
     enum State {
         INITIALIZED, 
-        ACTIVE, 
+        ACTIVATED, 
         FINALIZED
     }
 
@@ -104,13 +105,14 @@ contract RoleBasedEscrow is Initializable, AccessControl {
         require(payee != funder, "ArbitrableEscrow: payee cannot be itself");
 
         __Escrow_init(funder, payee);
+        __Escrow_init_unchained();
     }
 
     /**
      * @dev Register payee
      */
     function registerAsPayee() public {
-        require(state() < State.ACTIVE, "RoleBasedEscrow: can only deposit while INITIATED");
+        require(state() < State.ACTIVATED, "RoleBasedEscrow: can only deposit while INITIATED");
 
         _registerPayee(msg.sender);
     }
@@ -126,16 +128,6 @@ contract RoleBasedEscrow is Initializable, AccessControl {
         emit PayeeRegistered(payee);
     }
     
-    /**
-     * @dev Register funder. Since this does not add any fundings and funder needs to perform deposit again, 
-     * its usage is discouraged and use deposit function directly.
-     */
-    function registerAsFunder() public {
-        require(state() < State.ACTIVE, "RoleBasedEscrow: can only deposit while INITIATED");
-
-        _registerFunder(msg.sender);
-    }
-
     function _registerFunder(address funder) internal {
         require(funder != address(0), "RoleBasedEscrow: funder address must not be empty");
         require(funderExist(funder) == false, "RoleBasedEscrow: cannot register twice as funder");
@@ -152,7 +144,7 @@ contract RoleBasedEscrow is Initializable, AccessControl {
      * @param tokenAddress token to be deposited
      */
     function deposit(address tokenAddress) payable external {
-        require(state() >= State.INITIALIZED && state() <= State.ACTIVE, "RoleBasedEscrow: can only deposit after INITIATED");
+        require(state() >= State.INITIALIZED && state() <= State.ACTIVATED, "RoleBasedEscrow: can only deposit after INITIATED");
         require(msg.value > 0, "RoleBasedEscrow: Token amount must be greater than zero");
  
         IERC20 erc20Token = IERC20(tokenAddress);
@@ -184,8 +176,8 @@ contract RoleBasedEscrow is Initializable, AccessControl {
     }
 
     function _withdraw(address payee) private {
-        IERC20[] memory tokenWithdrawn;
-        uint256[] memory amountWithdrawn;
+        IERC20[] memory tokenWithdrawn = new IERC20[](fundedTokens.length);
+        uint256[] memory amountWithdrawn = new uint256[](fundedTokens.length);
 
         for (uint i = 0; i < fundedTokens.length; i++) {
             IERC20 token = fundedTokens[i];
@@ -194,8 +186,8 @@ contract RoleBasedEscrow is Initializable, AccessControl {
                 token.transfer(payee, amount);
                 funds[payee][token] = 0;
 
-                tokenWithdrawn[tokenWithdrawn.length] = token;
-                amountWithdrawn[tokenWithdrawn.length] = amount;
+                tokenWithdrawn[i] = token;
+                amountWithdrawn[i] = amount;
             }
         }
 
@@ -206,20 +198,13 @@ contract RoleBasedEscrow is Initializable, AccessControl {
         return state() == State.INITIALIZED || state() == State.FINALIZED;
     }
 
-    function acceptContract() external virtual onlyPayee {
+    function activateContract() external virtual onlyFunder {
         require(state() == State.INITIALIZED, "RoleBasedEscrow: Escrow can be activated only after initialized");
-        _state = State.ACTIVE;
+        require(payees.length > 0, "RoleBasedEscrow: There must be at least one payee");
 
-        emit ContractAccepted(msg.sender);
-    }
+        _state = State.ACTIVATED;
 
-    function confirmDelivery(bool autoWithdraw) external virtual onlyFunder {
-        require(state() == State.ACTIVE, "ArbitrableEscrow: can only confirm delivery while ACTIVE or on DISPUTE");
-        _state = State.FINALIZED;
-
-        settle(autoWithdraw);
-
-        emit DeliveryConfirmed(msg.sender);
+        emit ContractActivated(msg.sender);
     }
 
     /**
@@ -232,7 +217,7 @@ contract RoleBasedEscrow is Initializable, AccessControl {
      * Emits a {Withdrawn} event.
      */
     function settle(bool autoWithdraw) public virtual onlyFactoryOrFunder {
-        require(state() == State.ACTIVE, "RoleBasedEscrow: Escrow can be finalized (settled) on ACTIVE state only");
+        require(state() == State.ACTIVATED, "RoleBasedEscrow: Escrow can be finalized (settled) on ACTIVATED state only");
         
         // For each token funded
         for (uint tokenIndex = 0; tokenIndex < fundedTokens.length; tokenIndex++) {
@@ -264,11 +249,12 @@ contract RoleBasedEscrow is Initializable, AccessControl {
         _state = State.FINALIZED;
     }
 
+
     function _totalAmountOf(IERC20 token, address[] memory parties) private view returns (uint256) {
         uint256 totalAmountPerToken = 0;
         for (uint index = 0; index < parties.length; index++) {
             address party = parties[index];
-            totalAmountPerToken = funds[party][token];
+            totalAmountPerToken += funds[party][token];
         }
 
         return totalAmountPerToken;
