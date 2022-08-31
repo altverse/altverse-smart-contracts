@@ -509,4 +509,67 @@ describe("ArbitrableEscrow", function () {
         .withArgs(payeeAccount.address);
     });
   });
+
+  describe("One-to-One Happy Path", function () {
+    it("Should pass each steps properly w/ createEscrowAsFunder", async function () {
+      const { arbitrableEscrowFactory, eventResult, factoryAccount, fakeUSDToken, fakeUSDToken2, funderAccount, otherAccount1, otherAccount2, payeeAccount } = await createFunderEscrow(false);
+
+      const escrowAddress = eventResult?.escrow;
+
+      // const contractWithPublicAccess = await ethers.getContractAt("ArbitrableEscrow", escrowAddress);
+
+      // 1. A funder create a contract
+      const contractWithFunder = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, funderAccount);
+      const onlyFunder = await contractWithFunder.funders(0);
+      expect(onlyFunder).to.be.equals(funderAccount.address);
+
+      // 2. A payee registers himself as a payee of the contract
+      // Secret identifier is shared between the funder and the payee
+      const secretIdentifier = ethers.utils.formatBytes32String("0123456789abcdef");
+      const contractWithPayee = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, payeeAccount);
+      await contractWithPayee.registerAsPayee(secretIdentifier);
+      const onlyPayeeCandidate = await contractWithPayee.payeeCandidates(0);
+      // since the payee is not yet confirmed payee
+      await expect(contractWithPayee.payees(0)).to.be.reverted;
+      expect(onlyPayeeCandidate).to.be.equals(payeeAccount.address);
+
+      // 3. The funder first approve an ERC20 token
+      // The funder has 1000 USDT now
+      await fakeUSDToken.transfer(funderAccount.address, 1000);
+      // Spending 300 USDT is allowed
+      await fakeUSDToken.connect(funderAccount).approve(escrowAddress, 300);
+
+      const toDeposit = 300;
+      await contractWithFunder.deposit(fakeUSDToken.address, { value: toDeposit });
+      const fund = await contractWithFunder.funds(funderAccount.address, fakeUSDToken.address);
+      console.log(">>>> " , fund);
+      expect(fund).to.be.equals(toDeposit);
+
+      // 4. The funder grant payee role to the payee with shared secret identifier
+      await contractWithFunder.grantPayeeRole([payeeAccount.address]);
+      const onlyPayee = await contractWithFunder.payees(0);
+      expect(onlyPayee).to.be.equals(payeeAccount.address);
+
+      // 5. The funder activates the contract
+      await contractWithFunder.activateContract();
+      const updatedState = await contractWithFunder.state();
+      expect(updatedState).to.be.equals(1);
+
+      // (The payee do his job)
+      // 6. The funder settles the contract
+      await contractWithFunder.settle(false);
+      const updatedState2 = await contractWithFunder.state();
+      expect(updatedState2).to.be.equals(2);
+      expect(await contractWithFunder.withdrawalAllowed(payeeAccount.address)).to.be.true;
+      
+      const reward = await contractWithFunder.funds(payeeAccount.address, fakeUSDToken.address);
+      console.log(reward);
+      expect(+reward).to.equals(toDeposit);
+
+      // 7. The payee withdraw his reward
+      await contractWithPayee.withdraw();
+      const payeeBalance = await fakeUSDToken.connect(payeeAccount).balanceOf(payeeAccount.address);
+      expect(+payeeBalance).to.equals(toDeposit);
+    });
+  });
 });
