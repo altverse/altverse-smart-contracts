@@ -22,7 +22,7 @@ describe("ArbitrableEscrow", function () {
 
   async function deployEscrowFactoryFixtureWithFakeUSD(address: string) {
     // Contracts are deployed using the first signer/account by default
-    const [factoryAccount, funderAccount, payeeAccount, otherAccount1, otherAccount2] = await ethers.getSigners();
+    const [factoryAccount, funderAccount, payeeAccount, otherAccount1, otherAccount2, otherAccount3] = await ethers.getSigners();
 
     const ArbitrableEscrowFactory = await ethers.getContractFactory("ArbitrableEscrowFactory");
     const arbitrableEscrowFactory = await ArbitrableEscrowFactory.deploy(address);
@@ -31,7 +31,7 @@ describe("ArbitrableEscrow", function () {
 
     const { fakeUSDToken, fakeUSDToken2 } = await deployFakeUSDFixture();
 
-    return { arbitrableEscrowFactory, fakeUSDToken, fakeUSDToken2, factoryAccount, funderAccount, payeeAccount, otherAccount1, otherAccount2 };
+    return { arbitrableEscrowFactory, fakeUSDToken, fakeUSDToken2, factoryAccount, funderAccount, payeeAccount, otherAccount1, otherAccount2, otherAccount3 };
   }
 
   async function deployEscrowFactoryFixtureWithAddress() {
@@ -50,7 +50,7 @@ describe("ArbitrableEscrow", function () {
     await fakeUSDToken.deployed();
 
     const FakeUSDToken2 = await ethers.getContractFactory("ERC20FakeUSDToken2");
-    const fakeUSDToken2 = await FakeUSDToken.deploy();
+    const fakeUSDToken2 = await FakeUSDToken2.deploy();
 
     await fakeUSDToken2.deployed();
 
@@ -58,7 +58,7 @@ describe("ArbitrableEscrow", function () {
   }
 
   async function createFunderEscrow(presetPayee: boolean) {
-    const { arbitrableEscrowFactory, fakeUSDToken, fakeUSDToken2, factoryAccount, funderAccount, payeeAccount, otherAccount1, otherAccount2 } = await loadFixture(
+    const { arbitrableEscrowFactory, fakeUSDToken, fakeUSDToken2, factoryAccount, funderAccount, payeeAccount, otherAccount1, otherAccount2, otherAccount3 } = await loadFixture(
       deployEscrowFactoryFixtureWithAddress
     );
 
@@ -70,24 +70,24 @@ describe("ArbitrableEscrow", function () {
 
     const eventResult = event?.args;
 
-    return { arbitrableEscrowFactory, tx, eventResult, fakeUSDToken, fakeUSDToken2, factoryAccount, funderAccount, payeeAccount, otherAccount1, otherAccount2 };
+    return { arbitrableEscrowFactory, tx, eventResult, fakeUSDToken, fakeUSDToken2, factoryAccount, funderAccount, payeeAccount, otherAccount1, otherAccount2, otherAccount3 };
   }
 
-  // async function createPayeeEscrow(presetFunder: boolean) {
-  //   const { arbitrableEscrowFactory, fakeUSDToken, fakeUSDToken2, factoryAccount, funderAccount, payeeAccount, otherAccount1, otherAccount2 } = await loadFixture(
-  //     deployEscrowFactoryFixtureWithAddress
-  //   );
+  async function createPayeeEscrow(presetFunder: boolean) {
+    const { arbitrableEscrowFactory, fakeUSDToken, fakeUSDToken2, factoryAccount, funderAccount, payeeAccount, otherAccount1, otherAccount2, otherAccount3 } = await loadFixture(
+      deployEscrowFactoryFixtureWithAddress
+    );
 
-  //   const tx = await arbitrableEscrowFactory.connect(payeeAccount).createEscrowAsPayee(presetFunder ? funderAccount.address : emptyAddress);
-  //   const txReceipt = await tx.wait();
-  //   const event = txReceipt.events?.find((x) => {
-  //     return x.event == "EscrowCreated";
-  //   });
+    const tx = await arbitrableEscrowFactory.connect(payeeAccount).createEscrowAsPayee(presetFunder ? funderAccount.address : emptyAddress);
+    const txReceipt = await tx.wait();
+    const event = txReceipt.events?.find((x) => {
+      return x.event == "EscrowCreated";
+    });
 
-  //   const eventResult = event?.args;
+    const eventResult = event?.args;
 
-  //   return { arbitrableEscrowFactory, tx, eventResult, fakeUSDToken, fakeUSDToken2, factoryAccount, funderAccount, payeeAccount, otherAccount1, otherAccount2 };
-  // }
+    return { arbitrableEscrowFactory, tx, eventResult, fakeUSDToken, fakeUSDToken2, factoryAccount, funderAccount, payeeAccount, otherAccount1, otherAccount2, otherAccount3 };
+  }
 
   describe("FakeUSDToken", function () {
     it("Should be able to transfer tokens", async function () {
@@ -112,7 +112,8 @@ describe("ArbitrableEscrow", function () {
     it("Base contract should not be initialized", async function () {
       const { arbitrableEscrow, funderAccount, payeeAccount } = await loadFixture(deployEscrowFixture);
 
-      await expect(arbitrableEscrow.initialize(payeeAccount.address, funderAccount.address)).to.be.reverted;
+      await expect(arbitrableEscrow.initializeAsFunder(payeeAccount.address, funderAccount.address)).to.be.reverted;
+      await expect(arbitrableEscrow.initializeAsPayee(payeeAccount.address, funderAccount.address)).to.be.reverted;
     });
 
     it("Should be able to clone escrow via factory (by funder)", async function () {
@@ -125,15 +126,15 @@ describe("ArbitrableEscrow", function () {
       await expect(onlyFunderTx).not.to.be.reverted;
     });
 
-    // it("Should be able to clone escrow via factory (by payee)", async function () {
-    //   const { tx } = await createPayeeEscrow(true);
+    it("Should be able to clone escrow via factory (by payee)", async function () {
+      const { tx } = await createPayeeEscrow(true);
 
-    //   await expect(tx).not.to.be.reverted;
+      await expect(tx).not.to.be.reverted;
 
-    //   const { tx: onlyPayeeTx } = await createPayeeEscrow(false);
+      const { tx: onlyPayeeTx } = await createPayeeEscrow(false);
 
-    //   await expect(onlyPayeeTx).not.to.be.reverted;
-    // });
+      await expect(onlyPayeeTx).not.to.be.reverted;
+    });
 
     it("Should set empty address if opponent address is not provided", async function () {
       const { eventResult: onlyFunderEvent } = await createFunderEscrow(false);
@@ -185,9 +186,9 @@ describe("ArbitrableEscrow", function () {
   });
 
   describe("Registeration", function () {
-    it("Should set correct roles when registering as funder/payee", async function () {
+    it("Should set correct roles when registering as funder", async function () {
       // Funder creates.
-      const { eventResult: funderWithoutPayeeEventResult, otherAccount1, otherAccount2, fakeUSDToken } = await createFunderEscrow(false);
+      const { eventResult: funderWithoutPayeeEventResult, funderAccount, otherAccount1, otherAccount2, otherAccount3, fakeUSDToken } = await createFunderEscrow(false);
 
       const escrow = await ethers.getContractAt("ArbitrableEscrow", funderWithoutPayeeEventResult?.escrow);
 
@@ -198,10 +199,47 @@ describe("ArbitrableEscrow", function () {
       const funderRole = await escrow.FUNDER_ROLE();
       expect(await escrow.hasRole(funderRole, otherAccount1.address)).to.be.true;
 
-      // then another payee registers.
-      await escrow.connect(otherAccount2).registerAsPayee("identifier");
+      // then candidate payee registers.
+      await escrow.connect(otherAccount2).registerAsPayee(ethers.utils.formatBytes32String("identifier"));
       const payeeRole = await escrow.PAYEE_ROLE();
+      expect(await escrow.hasRole(payeeRole, otherAccount2.address)).to.be.false;
+
+      // and unwanted payee also registers.
+      await escrow.connect(otherAccount3).registerAsPayee(ethers.utils.formatBytes32String("false_identifier"));
+      expect(await escrow.hasRole(payeeRole, otherAccount3.address)).to.be.false;
+
+      // when approved by creator (funderAccount - funder), then PAYEE_ROLE should be granted for the payee.
+      await escrow.connect(funderAccount).grantPayeeRole([otherAccount2.address]);
       expect(await escrow.hasRole(payeeRole, otherAccount2.address)).to.be.true;
+      expect(await escrow.hasRole(payeeRole, otherAccount3.address)).to.be.false;
+    });
+
+    it("Should set correct roles when registering as payee", async function () {
+      // Funder creates.
+      const { eventResult: funderWithoutPayeeEventResult, payeeAccount, otherAccount1, otherAccount2, otherAccount3, fakeUSDToken } = await createPayeeEscrow(false);
+
+      const escrow = await ethers.getContractAt("ArbitrableEscrow", funderWithoutPayeeEventResult?.escrow);
+
+      // then funder registers by deposit.
+      await fakeUSDToken.transfer(otherAccount1.address, 100);
+      await fakeUSDToken.connect(otherAccount1).approve(escrow.address, 100);
+      await expect(escrow.connect(otherAccount1).deposit(fakeUSDToken.address, { value: 100 })).not.to.be.reverted;
+      const funderRole = await escrow.FUNDER_ROLE();
+      expect(await escrow.hasRole(funderRole, otherAccount1.address)).to.be.true;
+
+      // then some other payee registers.
+      await escrow.connect(otherAccount2).registerAsPayee(ethers.utils.formatBytes32String("identifier"));
+      const payeeRole = await escrow.PAYEE_ROLE();
+      expect(await escrow.hasRole(payeeRole, otherAccount2.address)).to.be.false;
+
+      // and unwanted payee also registers.
+      await escrow.connect(otherAccount3).registerAsPayee(ethers.utils.formatBytes32String("false_identifier"));
+      expect(await escrow.hasRole(payeeRole, otherAccount3.address)).to.be.false;
+
+      // when approved by creator (funderAccount - funder), then PAYEE_ROLE should be granted for the payee.
+      await escrow.connect(payeeAccount).grantPayeeRole([otherAccount2.address]);
+      expect(await escrow.hasRole(payeeRole, otherAccount2.address)).to.be.true;
+      expect(await escrow.hasRole(payeeRole, otherAccount3.address)).to.be.false;
     });
 
     it("Should add into funders list when registered as funder", async function () {
@@ -239,7 +277,7 @@ describe("ArbitrableEscrow", function () {
       const escrow = await ethers.getContractAt("ArbitrableEscrow", eventResult?.escrow);
 
       // then trying to be a payee.
-      await expect(escrow.connect(funderAccount).registerAsPayee("identifier")).to.be.revertedWith("RoleBasedEscrow: funder cannot be a payee");
+      await expect(escrow.connect(funderAccount).registerAsPayee(ethers.utils.formatBytes32String("identifier"))).to.be.revertedWith("RoleBasedEscrow: funder cannot be a payee");
     });
 
     // it("Should not be able to register both funder and payee (as payee)", async function () {
@@ -416,7 +454,10 @@ describe("ArbitrableEscrow", function () {
       await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, { value: 100 })).not.to.be.reverted;
 
       // Payee joined
-      await expect(escrow.connect(payeeAccount).registerAsPayee("identifier")).not.to.be.reverted;
+      await expect(escrow.connect(payeeAccount).registerAsPayee(ethers.utils.formatBytes32String("identifier"))).not.to.be.reverted;
+
+      // Grant payee
+      await escrow.connect(funderAccount).grantPayeeRole([payeeAccount.address]);
 
       // Contract accepted
       await expect(escrow.connect(funderAccount).activateContract()).not.to.be.reverted;
@@ -436,12 +477,15 @@ describe("ArbitrableEscrow", function () {
     //   await expect(escrow.connect(funderAccount).registerAsFunder()).to.emit(escrow, "FunderRegistered").withArgs(funderAccount.address);
     // });
 
-    it("Should emit PayeeRegistered event when registering as payee", async function () {
-      const { eventResult, payeeAccount } = await createFunderEscrow(false);
+    it("Should emit PayeeRegistered event when payee is granted", async function () {
+      const { eventResult, funderAccount, payeeAccount } = await createFunderEscrow(false);
 
       const escrow = await ethers.getContractAt("ArbitrableEscrow", eventResult?.escrow);
+      await escrow.connect(payeeAccount).registerAsPayee(ethers.utils.formatBytes32String("identifier"));
 
-      await expect(escrow.connect(payeeAccount).registerAsPayee("identifier")).to.emit(escrow, "PayeeRegistered").withArgs(payeeAccount.address);
+      await expect(escrow.connect(funderAccount).grantPayeeRole([payeeAccount.address]))
+        .to.emit(escrow, "PayeeRegistered")
+        .withArgs(payeeAccount.address);
     });
   });
 });
