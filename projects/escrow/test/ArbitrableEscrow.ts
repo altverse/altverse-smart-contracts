@@ -142,29 +142,29 @@ describe("ArbitrableEscrow", function () {
       const onlyFunderEscrow = await ethers.getContractAt("ArbitrableEscrow", onlyFunderEvent?.escrow);
       await expect(onlyFunderEscrow.payees(0)).to.be.reverted;
 
-      // const { eventResult: onlyPayeeEvent } = await createPayeeEscrow(false);
+      const { eventResult: onlyPayeeEvent } = await createPayeeEscrow(false);
 
-      // const onlyPayeeEscrow = await ethers.getContractAt("ArbitrableEscrow", onlyPayeeEvent?.escrow);
-      // await expect(onlyPayeeEscrow.funders(0)).to.be.reverted;
+      const onlyPayeeEscrow = await ethers.getContractAt("ArbitrableEscrow", onlyPayeeEvent?.escrow);
+      await expect(onlyPayeeEscrow.funders(0)).to.be.reverted;
     });
 
-    // it("Should set correct roles when cloning escrow (w/ payee preset)", async function () {
-    //   const { eventResult, arbitrableEscrowFactory, funderAccount, payeeAccount } = await createPayeeEscrow(true);
+    it("Should set correct roles when cloning escrow (w/ payee preset)", async function () {
+      const { eventResult, arbitrableEscrowFactory, funderAccount, payeeAccount } = await createPayeeEscrow(true);
 
-    //   const escrow = await ethers.getContractAt("ArbitrableEscrow", eventResult?.escrow);
+      const escrow = await ethers.getContractAt("ArbitrableEscrow", eventResult?.escrow);
 
-    //   const adminRole = await escrow.DEFAULT_ADMIN_ROLE();
-    //   expect(await escrow.hasRole(adminRole, arbitrableEscrowFactory.address)).to.be.true;
+      const adminRole = await escrow.DEFAULT_ADMIN_ROLE();
+      expect(await escrow.hasRole(adminRole, arbitrableEscrowFactory.address)).to.be.true;
 
-    //   const factoryRole = await escrow.FACTORY_ROLE();
-    //   expect(await escrow.hasRole(factoryRole, arbitrableEscrowFactory.address)).to.be.true;
+      const factoryRole = await escrow.FACTORY_ROLE();
+      expect(await escrow.hasRole(factoryRole, arbitrableEscrowFactory.address)).to.be.true;
 
-    //   const funderRole = await escrow.FUNDER_ROLE();
-    //   expect(await escrow.hasRole(funderRole, funderAccount.address)).to.be.true;
+      const funderRole = await escrow.FUNDER_ROLE();
+      expect(await escrow.hasRole(funderRole, funderAccount.address)).to.be.true;
 
-    //   const payeeRole = await escrow.PAYEE_ROLE();
-    //   expect(await escrow.hasRole(payeeRole, payeeAccount.address)).to.be.true;
-    // });
+      const payeeRole = await escrow.PAYEE_ROLE();
+      expect(await escrow.hasRole(payeeRole, payeeAccount.address)).to.be.true;
+    });
 
     it("Should set correct roles when cloning escrow (w/ funder preset)", async function () {
       const { eventResult, arbitrableEscrowFactory, funderAccount, payeeAccount } = await createFunderEscrow(true);
@@ -257,18 +257,22 @@ describe("ArbitrableEscrow", function () {
       expect(await escrow.funders(1)).to.be.equal(otherAccount1.address);
     });
 
-    // it("Should add into payee list when registered as payee", async function () {
-    //   // Funder creates.
-    //   const { eventResult: funderWithoutPayeeEventResult, payeeAccount, otherAccount1 } = await createPayeeEscrow(false);
+    it("Should add into payee list when registered and granted as payee", async function () {
+      // Funder creates.
+      const { eventResult: funderWithoutPayeeEventResult, payeeAccount, otherAccount1 } = await createPayeeEscrow(false);
 
-    //   const escrow = await ethers.getContractAt("ArbitrableEscrow", funderWithoutPayeeEventResult?.escrow);
+      const escrow = await ethers.getContractAt("ArbitrableEscrow", funderWithoutPayeeEventResult?.escrow);
 
-    //   expect(await escrow.payees(0)).to.be.equal(payeeAccount.address);
+      expect(await escrow.payees(0)).to.be.equal(payeeAccount.address);
 
-    //   // then another funder registers.
-    //   await escrow.connect(otherAccount1).registerAsPayee();
-    //   expect(await escrow.payees(1)).to.be.equal(otherAccount1.address);
-    // });
+      // Payee joined
+      await expect(escrow.connect(otherAccount1).registerAsPayee(ethers.utils.formatBytes32String("identifier"))).not.to.be.reverted;
+
+      // Grant payee
+      await escrow.connect(payeeAccount).grantPayeeRole([otherAccount1.address]);
+
+      expect(await escrow.payees(1)).to.be.equal(otherAccount1.address);
+    });
 
     it("Should not be able to register both funder and payee (as funder)", async function () {
       // Funder creates.
@@ -280,37 +284,43 @@ describe("ArbitrableEscrow", function () {
       await expect(escrow.connect(funderAccount).registerAsPayee(ethers.utils.formatBytes32String("identifier"))).to.be.revertedWith("RoleBasedEscrow: funder cannot be a payee");
     });
 
-    // it("Should not be able to register both funder and payee (as payee)", async function () {
-    //   // Payee creates.
-    //   const { eventResult, payeeAccount, fakeUSDToken } = await createPayeeEscrow(false);
+    it("Should not be able to register both funder and payee (as payee)", async function () {
+      // Payee creates.
+      const { eventResult, payeeAccount, fakeUSDToken } = await createPayeeEscrow(false);
 
-    //   const escrow = await ethers.getContractAt("ArbitrableEscrow", eventResult?.escrow);
+      const escrow = await ethers.getContractAt("ArbitrableEscrow", eventResult?.escrow);
 
-    //   // then trying to be a funder.
-    //   await fakeUSDToken.transfer(payeeAccount.address, 100);
-    //   await fakeUSDToken.connect(payeeAccount).approve(escrow.address, 100);
-    //   await expect(escrow.connect(payeeAccount).deposit(fakeUSDToken.address, { value: 100 })).to.be.revertedWith("RoleBasedEscrow: payee cannot be a funder");
-    // });
+      // then trying to be a funder.
+      await fakeUSDToken.transfer(payeeAccount.address, 100);
+      await fakeUSDToken.connect(payeeAccount).approve(escrow.address, 100);
+      await expect(escrow.connect(payeeAccount).deposit(fakeUSDToken.address, { value: 100 })).to.be.revertedWith("RoleBasedEscrow: payee cannot be a funder");
+    });
 
-    // it("Should not be able to register twice for the funder role", async function () {
-    //   // Funder creates.
-    //   const { eventResult, funderAccount } = await createFunderEscrow(false);
+    it("Should not be able to register twice for the payee role", async function () {
+      // Payee creates.
+      const { eventResult, payeeAccount } = await createPayeeEscrow(false);
 
-    //   const escrow = await ethers.getContractAt("ArbitrableEscrow", eventResult?.escrow);
+      const escrow = await ethers.getContractAt("ArbitrableEscrow", eventResult?.escrow);
 
-    //   // then trying to be a funder again.
-    //   await expect(escrow.connect(funderAccount).registerAsFunder()).to.be.revertedWith("RoleBasedEscrow: cannot register twice as funder");
-    // });
+      // register as candidate
+      await expect(escrow.connect(payeeAccount).registerAsPayee(ethers.utils.formatBytes32String("identifier"))).not.to.be.reverted;
 
-    // it("Should not be able to register twice for the payee role", async function () {
-    //   // Payee creates.
-    //   const { eventResult, payeeAccount } = await createPayeeEscrow(false);
+      // then trying to be a payee again by granting himself.
+      await expect(escrow.connect(payeeAccount).grantPayeeRole([payeeAccount.address])).to.be.revertedWith("RoleBasedEscrow: cannot register twice as payee");
+    });
 
-    //   const escrow = await ethers.getContractAt("ArbitrableEscrow", eventResult?.escrow);
+    it("Should not be able to register twice for the payee candidate", async function () {
+      // Payee creates.
+      const { eventResult, payeeAccount, otherAccount1 } = await createPayeeEscrow(false);
 
-    //   // then trying to be a payee again.
-    //   await expect(escrow.connect(payeeAccount).registerAsPayee()).to.be.revertedWith("RoleBasedEscrow: cannot register twice as payee");
-    // });
+      const escrow = await ethers.getContractAt("ArbitrableEscrow", eventResult?.escrow);
+
+      // register as candidate
+      await expect(escrow.connect(otherAccount1).registerAsPayee(ethers.utils.formatBytes32String("identifier"))).not.to.be.reverted;
+
+      // register twice
+      await expect(escrow.connect(otherAccount1).registerAsPayee(ethers.utils.formatBytes32String("identifier"))).to.be.revertedWith("RoleBasedEscrow: cannot register twice as payee candidate");
+    });
   });
 
   describe("Deposits (Funding)", function () {
@@ -469,13 +479,24 @@ describe("ArbitrableEscrow", function () {
   describe("Contract Confirmation", function () {});
 
   describe("Events", function () {
-    // it("Should emit FunderRegistered event when registering as funder", async function () {
-    //   const { eventResult, funderAccount } = await createPayeeEscrow(false);
+    // event Deposited(address indexed funder, IERC20 erc20Token, uint256 amount);
+    // event Withdrawn(address indexed payee, IERC20[] erc20Token, uint256[] amount);
+    // event PayeeCandidateRegistered(address indexed payee);
+    // event PayeeRegistered(address indexed payee);
+    // event FunderRegistered(address indexed funder);
+    // event ContractActivated(address indexed funder);
+    // event FinalizeContract(address indexed sender);
+    it("Should emit FunderRegistered event when depositing", async function () {
+      const { eventResult, fakeUSDToken, funderAccount } = await createPayeeEscrow(false);
 
-    //   const escrow = await ethers.getContractAt("ArbitrableEscrow", eventResult?.escrow);
+      const escrow = await ethers.getContractAt("ArbitrableEscrow", eventResult?.escrow);
 
-    //   await expect(escrow.connect(funderAccount).registerAsFunder()).to.emit(escrow, "FunderRegistered").withArgs(funderAccount.address);
-    // });
+      await fakeUSDToken.transfer(funderAccount.address, 300);
+      await fakeUSDToken.connect(funderAccount).approve(escrow.address, 300);
+      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, { value: 300 }))
+        .to.emit(escrow, "FunderRegistered")
+        .withArgs(funderAccount.address);
+    });
 
     it("Should emit PayeeRegistered event when payee is granted", async function () {
       const { eventResult, funderAccount, payeeAccount } = await createFunderEscrow(false);

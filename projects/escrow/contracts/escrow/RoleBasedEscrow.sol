@@ -132,6 +132,7 @@ contract RoleBasedEscrow is Initializable, AccessControl {
      */
     function registerAsPayee(bytes32 identifier) public {
         require(state() < State.ACTIVATED, "RoleBasedEscrow: can only deposit while INITIATED");
+        require(candidateExist(msg.sender) == false, "RoleBasedEscrow: cannot register twice as payee candidate");
          require(funderExist(msg.sender) == false, "RoleBasedEscrow: funder cannot be a payee");
 
         payeeCandidates.push(msg.sender);
@@ -311,6 +312,10 @@ contract RoleBasedEscrow is Initializable, AccessControl {
 
     function funderExist(address funder) public view returns (bool) {
         return _existingAddress(funders, funder);
+    }
+
+    function candidateExist(address candidate) public view returns (bool) {
+        return _existingAddress(payeeCandidates, candidate);
     }
 
     function _existingAddress(address[] memory array, address target) private pure returns (bool) {
