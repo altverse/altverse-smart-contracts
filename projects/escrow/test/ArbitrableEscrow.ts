@@ -199,7 +199,7 @@ describe("ArbitrableEscrow", function () {
       expect(await escrow.hasRole(funderRole, otherAccount1.address)).to.be.true;
 
       // then another payee registers.
-      await escrow.connect(otherAccount2).registerAsPayee();
+      await escrow.connect(otherAccount2).registerAsPayee("identifier");
       const payeeRole = await escrow.PAYEE_ROLE();
       expect(await escrow.hasRole(payeeRole, otherAccount2.address)).to.be.true;
     });
@@ -239,7 +239,7 @@ describe("ArbitrableEscrow", function () {
       const escrow = await ethers.getContractAt("ArbitrableEscrow", eventResult?.escrow);
 
       // then trying to be a payee.
-      await expect(escrow.connect(funderAccount).registerAsPayee()).to.be.revertedWith("RoleBasedEscrow: funder cannot be a payee");
+      await expect(escrow.connect(funderAccount).registerAsPayee("identifier")).to.be.revertedWith("RoleBasedEscrow: funder cannot be a payee");
     });
 
     // it("Should not be able to register both funder and payee (as payee)", async function () {
@@ -416,7 +416,7 @@ describe("ArbitrableEscrow", function () {
       await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, { value: 100 })).not.to.be.reverted;
 
       // Payee joined
-      await expect(escrow.connect(payeeAccount).registerAsPayee()).not.to.be.reverted;
+      await expect(escrow.connect(payeeAccount).registerAsPayee("identifier")).not.to.be.reverted;
 
       // Contract accepted
       await expect(escrow.connect(funderAccount).activateContract()).not.to.be.reverted;
@@ -441,7 +441,7 @@ describe("ArbitrableEscrow", function () {
 
       const escrow = await ethers.getContractAt("ArbitrableEscrow", eventResult?.escrow);
 
-      await expect(escrow.connect(payeeAccount).registerAsPayee()).to.emit(escrow, "PayeeRegistered").withArgs(payeeAccount.address);
+      await expect(escrow.connect(payeeAccount).registerAsPayee("identifier")).to.emit(escrow, "PayeeRegistered").withArgs(payeeAccount.address);
     });
   });
 });

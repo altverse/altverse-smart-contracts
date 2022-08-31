@@ -21,17 +21,27 @@ contract RoleBasedEscrow is Initializable, AccessControl {
     bytes32 public constant FACTORY_ROLE = keccak256("FACTORY_ROLE");
     bytes32 public constant FUNDER_ROLE = keccak256("FUNDER_ROLE");
     bytes32 public constant PAYEE_ROLE = keccak256("PAYEE_ROLE");
+    bytes32 public constant CREATOR_ROLE = keccak256("CREATOR_ROLE");
     
     event Deposited(address indexed funder, IERC20 erc20Token, uint256 amount);
     event Withdrawn(address indexed payee, IERC20[] erc20Token, uint256[] amount);
     event PayeeRegistered(address indexed payee);
     event FunderRegistered(address indexed funder);
     event ContractActivated(address indexed funder);
-    event ContractAccepted(address indexed payee);
-    event DeliveryConfirmed(address indexed confirmer);
+    event FinalizeContract(address indexed sender);
 
     modifier onlyFactory() {
         require(hasRole(FACTORY_ROLE, msg.sender), "RoleBasedEscrow: Only the factory can call this function.");
+        _;
+    }
+
+    modifier onlyCreator() {
+        require(hasRole(CREATOR_ROLE, msg.sender), "RoleBasedEscrow: Only the creator can call this function.");
+        _;
+    }
+
+    modifier onlyPayee() {
+        require(hasRole(PAYEE_ROLE, msg.sender), "RoleBasedEscrow: Only the payee can call this function.");
         _;
     }
 
@@ -45,12 +55,6 @@ contract RoleBasedEscrow is Initializable, AccessControl {
         _;
     }
 
-    modifier onlyPayee() {
-        require(hasRole(PAYEE_ROLE, msg.sender), "RoleBasedEscrow: Only the payee can call this function.");
-        _;
-    }
-
-    
     modifier onlyParticipant() {
         require(hasRole(FACTORY_ROLE, msg.sender) || hasRole(FUNDER_ROLE, msg.sender) || hasRole(PAYEE_ROLE, msg.sender), "RoleBasedEscrow: Only the participant can call this function.");
         _;
@@ -66,6 +70,10 @@ contract RoleBasedEscrow is Initializable, AccessControl {
 
 
     IERC20[] fundedTokens;
+
+    address[] public payeeCandidates;
+    mapping (address => bytes32) candidatesIdentifier;
+
     address[] public payees;
     address[] public funders;
     mapping (address => mapping (IERC20 => uint256)) public funds;
@@ -111,10 +119,13 @@ contract RoleBasedEscrow is Initializable, AccessControl {
     /**
      * @dev Register payee
      */
-    function registerAsPayee() public {
+    function registerAsPayee(bytes32 identifier) public {
         require(state() < State.ACTIVATED, "RoleBasedEscrow: can only deposit while INITIATED");
 
-        _registerPayee(msg.sender);
+        payeeCandidates.push(msg.sender);
+        candidatesIdentifier[msg.sender] = identifier;
+
+        //_registerPayee(msg.sender);
     }
 
     function _registerPayee(address payee) internal {
@@ -128,6 +139,16 @@ contract RoleBasedEscrow is Initializable, AccessControl {
         emit PayeeRegistered(payee);
     }
     
+    function grantPayeeRole(address[] memory payeesToGrant) external onlyCreator {
+        for (uint i = 0; i < payeesToGrant.length; i++) {
+            address payeeToGrant = payeesToGrant[i];
+            
+            if (_existingAddress(payeeCandidates, payeeToGrant)) {
+                _registerPayee(payeeToGrant);
+            }
+        }
+    }
+
     function _registerFunder(address funder) internal {
         require(funder != address(0), "RoleBasedEscrow: funder address must not be empty");
         require(funderExist(funder) == false, "RoleBasedEscrow: cannot register twice as funder");
@@ -198,7 +219,7 @@ contract RoleBasedEscrow is Initializable, AccessControl {
         return state() == State.INITIALIZED || state() == State.FINALIZED;
     }
 
-    function activateContract() external virtual onlyFunder {
+    function activateContract() external virtual onlyCreator {
         require(state() == State.INITIALIZED, "RoleBasedEscrow: Escrow can be activated only after initialized");
         require(payees.length > 0, "RoleBasedEscrow: There must be at least one payee");
 
@@ -246,9 +267,14 @@ contract RoleBasedEscrow is Initializable, AccessControl {
             }
         }
 
-        _state = State.FINALIZED;
+        _finalize();
     }
 
+    function _finalize() internal {
+        _state = State.FINALIZED;
+
+        emit FinalizeContract(msg.sender);
+    }
 
     function _totalAmountOf(IERC20 token, address[] memory parties) private view returns (uint256) {
         uint256 totalAmountPerToken = 0;
