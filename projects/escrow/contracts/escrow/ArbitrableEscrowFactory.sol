@@ -21,21 +21,21 @@ contract ArbitrableEscrowFactory {
         require(arbitrableEscrowAddress != address(0), "Escrow contract does not exist");
 
         ArbitrableEscrow newEscrow = ArbitrableEscrow(Clones.clone(arbitrableEscrowAddress));
-        newEscrow.initialize(msg.sender, payee);
+        newEscrow.initializeAsFunder(msg.sender, payee);
         deployedEscrows[msg.sender].push(newEscrow);
 
         emit EscrowCreated(msg.sender, msg.sender, payee, newEscrow);
     }
 
-    // function createEscrowAsPayee(address funder) public {
-    //     require(arbitrableEscrowAddress != address(0), "Escrow contract does not exist");
+    function createEscrowAsPayee(address funder) public {
+        require(arbitrableEscrowAddress != address(0), "Escrow contract does not exist");
 
-    //     ArbitrableEscrow newEscrow = ArbitrableEscrow(Clones.clone(arbitrableEscrowAddress));
-    //     newEscrow.initialize(funder, msg.sender);
-    //     deployedEscrows[msg.sender].push(newEscrow);
+        ArbitrableEscrow newEscrow = ArbitrableEscrow(Clones.clone(arbitrableEscrowAddress));
+        newEscrow.initializeAsPayee(funder, msg.sender);
+        deployedEscrows[msg.sender].push(newEscrow);
 
-    //     emit EscrowCreated(msg.sender, funder, msg.sender, newEscrow);
-    // }
+        emit EscrowCreated(msg.sender, funder, msg.sender, newEscrow);
+    }
 
     function escrowsOf(address _owner) external view returns (ArbitrableEscrow[] memory) {
         return deployedEscrows[_owner];

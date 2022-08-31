@@ -25,6 +25,7 @@ contract RoleBasedEscrow is Initializable, AccessControl {
     
     event Deposited(address indexed funder, IERC20 erc20Token, uint256 amount);
     event Withdrawn(address indexed payee, IERC20[] erc20Token, uint256[] amount);
+    event PayeeCandidateRegistered(address indexed payee);
     event PayeeRegistered(address indexed payee);
     event FunderRegistered(address indexed funder);
     event ContractActivated(address indexed funder);
@@ -108,7 +109,17 @@ contract RoleBasedEscrow is Initializable, AccessControl {
     function __Escrow_init_unchained() internal onlyInitializing {
     }
 
-    function initialize(address funder, address payee) public virtual initializer {
+    function initializeAsFunder(address funder, address payee) public initializer {
+        _setupRole(CREATOR_ROLE, funder);
+        _initialize(funder, payee);
+    }
+
+    function initializeAsPayee(address funder, address payee) public initializer {
+        _setupRole(CREATOR_ROLE, payee);
+        _initialize(funder, payee);
+    }
+
+    function _initialize(address funder, address payee) internal virtual {
         require(isBaseContract == false, "ArbitrableEscrow: The base contract cannot be initialized");
         require(payee != funder, "ArbitrableEscrow: payee cannot be itself");
 
@@ -121,11 +132,12 @@ contract RoleBasedEscrow is Initializable, AccessControl {
      */
     function registerAsPayee(bytes32 identifier) public {
         require(state() < State.ACTIVATED, "RoleBasedEscrow: can only deposit while INITIATED");
+         require(funderExist(msg.sender) == false, "RoleBasedEscrow: funder cannot be a payee");
 
         payeeCandidates.push(msg.sender);
         candidatesIdentifier[msg.sender] = identifier;
 
-        //_registerPayee(msg.sender);
+        emit PayeeCandidateRegistered(msg.sender);
     }
 
     function _registerPayee(address payee) internal {
