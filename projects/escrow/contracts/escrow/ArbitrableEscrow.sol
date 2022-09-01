@@ -34,12 +34,12 @@ contract ArbitrableEscrow is Initializable, RoleBasedEscrow  {
      * @dev Initializer. Since the contract will be cloned and constructor is redundant, we need initialize function.
      * @param payee of the deposits.
      */
-    function _initialize(address funder, address payee) internal override {
+    function _initialize(address funder, address payee, string memory title_) internal override {
         require(isBaseContract == false, "ArbitrableEscrow: The base contract cannot be initialized");
         require(payee != funder, "ArbitrableEscrow: payee cannot be itself");
 
         __ArbitrableEscrow_init();
-        __Escrow_init(funder, payee);
+        __Escrow_init(funder, payee, title_);
     }
 
     function requestArbitration() external onlyParticipant {

@@ -69,6 +69,7 @@ contract RoleBasedEscrow is Initializable, AccessControl {
 
     State internal _state;
 
+    string title;
 
     IERC20[] fundedTokens;
 
@@ -96,34 +97,35 @@ contract RoleBasedEscrow is Initializable, AccessControl {
         _setupRole(FACTORY_ROLE, msg.sender);
     }
     
-    function __Escrow_init(address funder, address payee) internal onlyInitializing { 
+    function __Escrow_init(address funder, address payee, string memory title_) internal onlyInitializing { 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(FACTORY_ROLE, msg.sender);
         
         if (payee != address(0)) _registerPayee(payee);
         if (funder != address(0)) _registerFunder(funder);
 
+        title = title_;
         _state = State.INITIALIZED;
     }
 
     function __Escrow_init_unchained() internal onlyInitializing {
     }
 
-    function initializeAsFunder(address funder, address payee) public initializer {
-        _setupRole(CREATOR_ROLE, funder);
-        _initialize(funder, payee);
+    function initializeAsFunder(address funder, address payee, string memory _title) public initializer {
+          _setupRole(CREATOR_ROLE, funder);
+        _initialize(funder, payee, _title);
     }
 
-    function initializeAsPayee(address funder, address payee) public initializer {
+    function initializeAsPayee(address funder, address payee, string memory _title) public initializer {
         _setupRole(CREATOR_ROLE, payee);
-        _initialize(funder, payee);
+        _initialize(funder, payee, _title);
     }
 
-    function _initialize(address funder, address payee) internal virtual {
+    function _initialize(address funder, address payee, string memory _title) internal virtual {
         require(isBaseContract == false, "ArbitrableEscrow: The base contract cannot be initialized");
         require(payee != funder, "ArbitrableEscrow: payee cannot be itself");
 
-        __Escrow_init(funder, payee);
+        __Escrow_init(funder, payee, _title);
         __Escrow_init_unchained();
     }
 

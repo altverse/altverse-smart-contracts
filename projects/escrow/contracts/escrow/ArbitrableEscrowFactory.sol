@@ -17,21 +17,21 @@ contract ArbitrableEscrowFactory {
         arbitrableEscrowAddress = _arbitrableEscrowAddress;
     }
 
-    function createEscrowAsFunder(address payee) public {
+    function createEscrowAsFunder(address payee, string memory title) public {
         require(arbitrableEscrowAddress != address(0), "Escrow contract does not exist");
 
         ArbitrableEscrow newEscrow = ArbitrableEscrow(Clones.clone(arbitrableEscrowAddress));
-        newEscrow.initializeAsFunder(msg.sender, payee);
+        newEscrow.initializeAsFunder(msg.sender, payee, title);
         deployedEscrows[msg.sender].push(newEscrow);
 
         emit EscrowCreated(msg.sender, msg.sender, payee, newEscrow);
     }
 
-    function createEscrowAsPayee(address funder) public {
+    function createEscrowAsPayee(address funder, string memory title) public {
         require(arbitrableEscrowAddress != address(0), "Escrow contract does not exist");
 
         ArbitrableEscrow newEscrow = ArbitrableEscrow(Clones.clone(arbitrableEscrowAddress));
-        newEscrow.initializeAsPayee(funder, msg.sender);
+        newEscrow.initializeAsPayee(funder, msg.sender, title);
         deployedEscrows[msg.sender].push(newEscrow);
 
         emit EscrowCreated(msg.sender, funder, msg.sender, newEscrow);

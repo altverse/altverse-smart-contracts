@@ -64,7 +64,7 @@ describe("ArbitrableEscrow", function () {
       deployEscrowFactoryFixtureWithAddress
     );
 
-    const tx = await arbitrableEscrowFactory.connect(funderAccount).createEscrowAsFunder(presetPayee ? payeeAccount.address : emptyAddress);
+    const tx = await arbitrableEscrowFactory.connect(funderAccount).createEscrowAsFunder(presetPayee ? payeeAccount.address : emptyAddress, "");
     const txReceipt = await tx.wait();
     const event = txReceipt.events?.find((x) => {
       return x.event == "EscrowCreated";
@@ -80,7 +80,7 @@ describe("ArbitrableEscrow", function () {
       deployEscrowFactoryFixtureWithAddress
     );
 
-    const tx = await arbitrableEscrowFactory.connect(payeeAccount).createEscrowAsPayee(presetFunder ? funderAccount.address : emptyAddress);
+    const tx = await arbitrableEscrowFactory.connect(payeeAccount).createEscrowAsPayee(presetFunder ? funderAccount.address : emptyAddress, "");
     const txReceipt = await tx.wait();
     const event = txReceipt.events?.find((x) => {
       return x.event == "EscrowCreated";
@@ -114,8 +114,8 @@ describe("ArbitrableEscrow", function () {
     it("Base contract should not be initialized", async function () {
       const { arbitrableEscrow, funderAccount, payeeAccount } = await loadFixture(deployEscrowFixture);
 
-      await expect(arbitrableEscrow.initializeAsFunder(payeeAccount.address, funderAccount.address)).to.be.reverted;
-      await expect(arbitrableEscrow.initializeAsPayee(payeeAccount.address, funderAccount.address)).to.be.reverted;
+      await expect(arbitrableEscrow.initializeAsFunder(payeeAccount.address, funderAccount.address, "")).to.be.reverted;
+      await expect(arbitrableEscrow.initializeAsPayee(payeeAccount.address, funderAccount.address, "")).to.be.reverted;
     });
 
     it("Should be able to clone escrow via factory (by funder)", async function () {
@@ -704,12 +704,12 @@ describe("ArbitrableEscrow", function () {
 
       it("initializeAsFunder: if contract is already initalized initializeAsFunder should not be possible", async function () {
         const contractWithFunder = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, funderAccount);
-        await expect(contractWithFunder.initializeAsFunder(funderAccount.address, payeeAccount.address)).to.be.reverted;
+        await expect(contractWithFunder.initializeAsFunder(funderAccount.address, payeeAccount.address, "")).to.be.reverted;
       });
 
       it("initializeAsPayee: if contract is already initalized initializeAsPayee should not be possible", async function () {
         const contractWithFunder = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, funderAccount);
-        await expect(contractWithFunder.initializeAsPayee(funderAccount.address, payeeAccount.address)).to.be.reverted;
+        await expect(contractWithFunder.initializeAsPayee(funderAccount.address, payeeAccount.address, "")).to.be.reverted;
       });
 
       // (4) registerAsPayee: Since registerAsPayee progresses the state of this contract, it does not test here.
