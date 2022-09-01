@@ -478,7 +478,36 @@ describe("ArbitrableEscrow", function () {
     });
   });
 
-  describe("Contract Confirmation", function () {});
+  describe("Settlement", function () {
+    it("Should be able to settle after the confirmation is performed.", async function () {
+      const { eventResult, fakeUSDToken, funderAccount, payeeAccount } = await createFunderEscrow(false);
+
+      const escrow = await ethers.getContractAt("ArbitrableEscrow", eventResult?.escrow);
+
+      // Deposit
+      await fakeUSDToken.transfer(funderAccount.address, 1000);
+      await fakeUSDToken.connect(funderAccount).approve(escrow.address, 1000);
+      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, { value: 100 })).not.to.be.reverted;
+
+      // Payee join & grant
+      await expect(escrow.connect(payeeAccount).registerAsPayee(ethers.utils.formatBytes32String("identifier"))).not.to.be.reverted;
+      await escrow.connect(funderAccount).grantPayeeRole([payeeAccount.address]);
+
+      // Contract accepted and Settle
+      await expect(escrow.connect(funderAccount).activateContract()).not.to.be.reverted;
+      await expect(escrow.connect(funderAccount).settle(true)).not.to.be.reverted;
+    });
+
+    it("Should not be able to settle before the confirmation is performed.", async function () {});
+
+    it("Should be able to get rewarded when the settlement has completed. (autoWithdraw = true)", async function () {});
+
+    it("Should not be able to get rewarded automatically when the settlement has completed. (autoWithdraw = false)", async function () {});
+
+    it("Should be able to withdraw when the settlement has completed with autoWithdraw = false.", async function () {});
+
+    it("Should set to FINALIZED state after the settlement has completed", async function () {});
+  });
 
   describe("Events", function () {
     // event Deposited(address indexed funder, IERC20 erc20Token, uint256 amount);
@@ -514,7 +543,7 @@ describe("ArbitrableEscrow", function () {
 
   describe("One-to-One Happy Path", function () {
     it("Should pass each steps properly w/ createEscrowAsFunder", async function () {
-      const { arbitrableEscrowFactory, eventResult, factoryAccount, fakeUSDToken, fakeUSDToken2, funderAccount, otherAccount1, otherAccount2, payeeAccount } = await createFunderEscrow(false);
+      const { eventResult, fakeUSDToken, funderAccount, payeeAccount } = await createFunderEscrow(false);
 
       const escrowAddress = eventResult?.escrow;
 
@@ -544,7 +573,6 @@ describe("ArbitrableEscrow", function () {
       const toDeposit = 300;
       await contractWithFunder.deposit(fakeUSDToken.address, { value: toDeposit });
       const fund = await contractWithFunder.funds(funderAccount.address, fakeUSDToken.address);
-      console.log(">>>> " , fund);
       expect(fund).to.be.equals(toDeposit);
 
       // 4. The funder grant payee role to the payee with shared secret identifier
@@ -563,9 +591,8 @@ describe("ArbitrableEscrow", function () {
       const updatedState2 = await contractWithFunder.state();
       expect(updatedState2).to.be.equals(2);
       expect(await contractWithFunder.withdrawalAllowed(payeeAccount.address)).to.be.true;
-      
+
       const reward = await contractWithFunder.funds(payeeAccount.address, fakeUSDToken.address);
-      console.log(reward);
       expect(+reward).to.equals(toDeposit);
 
       // 7. The payee withdraw his reward
@@ -580,7 +607,7 @@ describe("ArbitrableEscrow", function () {
       // - the payee doesn't need to grant himself as a contract's payee, it is set when initialized.
       // - the payee activates the contract.
 
-      const { arbitrableEscrowFactory, eventResult, factoryAccount, fakeUSDToken, fakeUSDToken2, funderAccount, otherAccount1, otherAccount2, payeeAccount } = await createPayeeEscrow(false);
+      const { eventResult, fakeUSDToken, funderAccount, payeeAccount } = await createPayeeEscrow(false);
 
       const escrowAddress = eventResult?.escrow;
 
@@ -616,7 +643,7 @@ describe("ArbitrableEscrow", function () {
       const updatedState2 = await contractWithFunder.state();
       expect(updatedState2).to.be.equals(2);
       expect(await contractWithFunder.withdrawalAllowed(payeeAccount.address)).to.be.true;
-      
+
       const reward = await contractWithFunder.funds(payeeAccount.address, fakeUSDToken.address);
       expect(+reward).to.equals(toDeposit);
 
@@ -672,7 +699,6 @@ describe("ArbitrableEscrow", function () {
 
       it("requestArbitration: should be possible only when the contract is activated", async function () {
         const contractWithFunder = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, funderAccount);
-        // FIX: onlyFunder modifier seems not working. The reverting message is not what expected.
         await expect(contractWithFunder.requestArbitration()).to.be.revertedWith("ArbitrableEscrow: can only start arbitration while ACTIVE");
       });
 
@@ -690,16 +716,14 @@ describe("ArbitrableEscrow", function () {
 
       it("grantPayeeRole: function call with empty array should be reverted", async function () {
         const contractWithFunder = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, funderAccount);
-        // FIX: function call with empty array should be reverted
-        await expect(contractWithFunder.grantPayeeRole([])).to.be.reverted;
+        await expect(contractWithFunder.grantPayeeRole([])).to.be.revertedWith("RoleBasedEscrow: array must be larger than 0");
       });
 
       it("grantPayeeRole: since payee is yet set, should be reverted", async function () {
         const contractWithFunder = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, funderAccount);
-        // FIX: should be reverted
-        await expect(contractWithFunder.grantPayeeRole([payeeAccount.address])).to.be.reverted;
+        await expect(contractWithFunder.grantPayeeRole([payeeAccount.address])).to.be.revertedWith("RoleBasedEscrow: there is no candidates to grant");
       });
-      
+
       // (6) deposit: Since deposit changes the state of this contarct, it does not test here.
 
       it("withdraw: withdraw should be possible, although there's no effect at all", async function () {
@@ -711,12 +735,6 @@ describe("ArbitrableEscrow", function () {
         const contractWithFunder = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, funderAccount);
         // Since there is no deposit in this test, there is no effect at all. But withdarwl should be allowed.
         expect(await contractWithFunder.withdrawalAllowed(funderAccount.address)).to.equals(true);
-      });
-
-      it("withdrawlAllowed should only be allowed for participants", async function () {
-        const contractWithFunder = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, funderAccount);
-        // FIX:  withdrawlAllowed should only be allowed for participants
-        expect(await contractWithFunder.withdrawalAllowed(payeeAccount.address)).to.be.reverted;
       });
 
       it("activateContract should be reverted since no payee is set", async function () {

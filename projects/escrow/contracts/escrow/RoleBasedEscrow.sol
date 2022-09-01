@@ -153,6 +153,9 @@ contract RoleBasedEscrow is Initializable, AccessControl {
     }
     
     function grantPayeeRole(address[] memory payeesToGrant) external onlyCreator {
+        require(payeesToGrant.length > 0, "RoleBasedEscrow: array must be larger than 0");
+        require(payeeCandidates.length > 0, "RoleBasedEscrow: there is no candidates to grant");
+
         for (uint i = 0; i < payeesToGrant.length; i++) {
             address payeeToGrant = payeesToGrant[i];
             
@@ -257,11 +260,10 @@ contract RoleBasedEscrow is Initializable, AccessControl {
         for (uint tokenIndex = 0; tokenIndex < fundedTokens.length; tokenIndex++) {
             IERC20 token = fundedTokens[tokenIndex];
             uint256 totalAmountPerToken = _totalAmountOf(token, funders);
-
             // Then distribute to payees equally
             if (totalAmountPerToken > 0 && payees.length > 0) {
                 uint256 numberOfPayees = payees.length;
-                uint256 amountEach = numberOfPayees / totalAmountPerToken;
+                uint256 amountEach = totalAmountPerToken / numberOfPayees;
 
                 for (uint payeeIndex = 0; payeeIndex < payees.length; payeeIndex++) {
                     address payee = payees[payeeIndex];
@@ -275,8 +277,8 @@ contract RoleBasedEscrow is Initializable, AccessControl {
                 }
 
                 // TODO: Put leftover amount to Treasury
-                console.log("LeftOver: token - ", address(token));
-                console.log("LeftOver: totalAmountPerToken - ", totalAmountPerToken);
+                // console.log("LeftOver: token - ", address(token));
+                // console.log("LeftOver: totalAmountPerToken - ", totalAmountPerToken);
             }
         }
 
