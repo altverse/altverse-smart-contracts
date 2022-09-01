@@ -28,7 +28,7 @@ contract RoleBasedEscrow is Initializable, AccessControl {
     event PayeeCandidateRegistered(address indexed payee);
     event PayeeRegistered(address indexed payee);
     event FunderRegistered(address indexed funder);
-    event ContractActivated(address indexed funder);
+    event ContractActivated(address indexed creator);
     event FinalizeContract(address indexed sender);
 
     modifier onlyFactory() {
