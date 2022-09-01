@@ -1,6 +1,8 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
+import { ERC20FakeUSDToken, ERC20FakeUSDToken2 } from "../typechain-types";
 
 const emptyAddress = "0x0000000000000000000000000000000000000000";
 
@@ -622,6 +624,133 @@ describe("ArbitrableEscrow", function () {
       await contractWithPayee.withdraw();
       const payeeBalance = await fakeUSDToken.connect(payeeAccount).balanceOf(payeeAccount.address);
       expect(+payeeBalance).to.equals(toDeposit);
+    });
+  });
+
+  describe("Proper response for all public function calls for each steps made by each actors", function () {
+    // The contract should response properly for each public function in a intended way.
+    //
+    // The list below is all possible public calls:
+    // ArbitrableEscrow:
+    // - requestArbitration
+    // RoleBasedEscrow:
+    // - initializeAsFunder
+    // - initializeAsPayee
+    // - registerAsPayee
+    // - grantPayeeRole
+    // - deposit
+    // - withdraw
+    // - withdrawalAllowed
+    // - activateContract
+    // - settle
+    // - state
+    // - payeeExist
+    // - funderExist
+    // - candidateExist
+
+    describe("Right after createEscrowAsFunder all public calls made by funder should work properly", async function () {
+      let escrowAddress: string;
+      let arbitrableEscrowFactory;
+      let fakeUSDToken: ERC20FakeUSDToken;
+      let fakeUSDToken2: ERC20FakeUSDToken2;
+      let funderAccount: SignerWithAddress;
+      let otherAccount1: SignerWithAddress;
+      let otherAccount2: SignerWithAddress;
+      let payeeAccount: SignerWithAddress;
+
+      this.beforeEach(async function () {
+        const fixture = await createFunderEscrow(false);
+        escrowAddress = fixture.eventResult?.escrow;
+        arbitrableEscrowFactory = fixture.arbitrableEscrowFactory;
+        fakeUSDToken = fixture.fakeUSDToken;
+        fakeUSDToken2 = fixture.fakeUSDToken2;
+        funderAccount = fixture.funderAccount;
+        otherAccount1 = fixture.otherAccount1;
+        otherAccount2 = fixture.otherAccount2;
+        payeeAccount = fixture.payeeAccount;
+      });
+
+      it("requestArbitration: should be possible only when the contract is activated", async function () {
+        const contractWithFunder = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, funderAccount);
+        // FIX: onlyFunder modifier seems not working. The reverting message is not what expected.
+        await expect(contractWithFunder.requestArbitration()).to.be.revertedWith("ArbitrableEscrow: can only start arbitration while ACTIVE");
+      });
+
+      it("initializeAsFunder: if contract is already initalized initializeAsFunder should not be possible", async function () {
+        const contractWithFunder = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, funderAccount);
+        await expect(contractWithFunder.initializeAsFunder(funderAccount.address, payeeAccount.address)).to.be.reverted;
+      });
+
+      it("initializeAsPayee: if contract is already initalized initializeAsPayee should not be possible", async function () {
+        const contractWithFunder = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, funderAccount);
+        await expect(contractWithFunder.initializeAsPayee(funderAccount.address, payeeAccount.address)).to.be.reverted;
+      });
+
+      // (4) registerAsPayee: Since registerAsPayee progresses the state of this contract, it does not test here.
+
+      it("grantPayeeRole: function call with empty array should be reverted", async function () {
+        const contractWithFunder = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, funderAccount);
+        // FIX: function call with empty array should be reverted
+        await expect(contractWithFunder.grantPayeeRole([])).to.be.reverted;
+      });
+
+      it("grantPayeeRole: since payee is yet set, should be reverted", async function () {
+        const contractWithFunder = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, funderAccount);
+        // FIX: should be reverted
+        await expect(contractWithFunder.grantPayeeRole([payeeAccount.address])).to.be.reverted;
+      });
+      
+      // (6) deposit: Since deposit changes the state of this contarct, it does not test here.
+
+      it("withdraw: withdraw should be possible, although there's no effect at all", async function () {
+        const contractWithFunder = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, funderAccount);
+        await expect(contractWithFunder.withdraw()).not.to.be.reverted;
+      });
+
+      it("withdrawalAllowed: funder should be possible", async function () {
+        const contractWithFunder = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, funderAccount);
+        // Since there is no deposit in this test, there is no effect at all. But withdarwl should be allowed.
+        expect(await contractWithFunder.withdrawalAllowed(funderAccount.address)).to.equals(true);
+      });
+
+      it("withdrawlAllowed should only be allowed for participants", async function () {
+        const contractWithFunder = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, funderAccount);
+        // FIX:  withdrawlAllowed should only be allowed for participants
+        expect(await contractWithFunder.withdrawalAllowed(payeeAccount.address)).to.be.reverted;
+      });
+
+      it("activateContract should be reverted since no payee is set", async function () {
+        const contractWithFunder = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, funderAccount);
+        await expect(contractWithFunder.activateContract()).to.be.revertedWith("RoleBasedEscrow: There must be at least one payee");
+      });
+
+      it("settle should be reverted since the state of the contract is INITIALIZED", async function () {
+        const contractWithFunder = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, funderAccount);
+        await expect(contractWithFunder.settle(false)).to.be.revertedWith("RoleBasedEscrow: Escrow can be finalized (settled) on ACTIVATED state only");
+      });
+
+      it("state should react properly", async function () {
+        const contractWithFunder = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, funderAccount);
+        expect(await contractWithFunder.state()).to.equals(0);
+      });
+
+      it("payeeExist should react properly", async function () {
+        const contractWithFunder = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, funderAccount);
+        expect(await contractWithFunder.payeeExist(funderAccount.address)).to.be.false;
+        expect(await contractWithFunder.payeeExist(payeeAccount.address)).to.be.false;
+      });
+
+      it("funderExist should react properly", async function () {
+        const contractWithFunder = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, funderAccount);
+        expect(await contractWithFunder.funderExist(funderAccount.address)).to.be.true;
+        expect(await contractWithFunder.funderExist(payeeAccount.address)).to.be.false;
+      });
+
+      it("candidateExist should react properly", async function () {
+        const contractWithFunder = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, funderAccount);
+        expect(await contractWithFunder.candidateExist(funderAccount.address)).to.be.false;
+        expect(await contractWithFunder.candidateExist(payeeAccount.address)).to.be.false;
+      });
     });
   });
 });
