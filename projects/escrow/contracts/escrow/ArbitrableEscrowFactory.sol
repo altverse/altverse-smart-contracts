@@ -14,7 +14,7 @@ contract ArbitrableEscrowFactory {
     mapping(address => ArbitrableEscrow[]) public deployedEscrows;
 
     constructor(address _arbitrableEscrowAddress) {
-        require(arbitrableEscrowAddress != address(0), "Escrow contract must have valid address");
+        require(_arbitrableEscrowAddress != address(0), "Escrow contract must have valid address");
         arbitrableEscrowAddress = _arbitrableEscrowAddress;
     }
 
