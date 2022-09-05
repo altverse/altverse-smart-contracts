@@ -14,6 +14,7 @@ contract ArbitrableEscrowFactory {
     mapping(address => ArbitrableEscrow[]) public deployedEscrows;
 
     constructor(address _arbitrableEscrowAddress) {
+        require(arbitrableEscrowAddress != address(0), "Escrow contract must have valid address");
         arbitrableEscrowAddress = _arbitrableEscrowAddress;
     }
 
@@ -21,8 +22,8 @@ contract ArbitrableEscrowFactory {
         require(arbitrableEscrowAddress != address(0), "Escrow contract does not exist");
 
         ArbitrableEscrow newEscrow = ArbitrableEscrow(Clones.clone(arbitrableEscrowAddress));
-        newEscrow.initializeAsFunder(msg.sender, payee, title);
         deployedEscrows[msg.sender].push(newEscrow);
+        newEscrow.initializeAsFunder(msg.sender, payee, title);
 
         emit EscrowCreated(msg.sender, msg.sender, payee, newEscrow);
     }

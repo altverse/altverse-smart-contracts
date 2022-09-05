@@ -510,8 +510,8 @@ describe("ArbitrableEscrow", function () {
   });
 
   describe("Events", function () {
-    // event Deposited(address indexed funder, IERC20 erc20Token, uint256 amount);
-    // event Withdrawn(address indexed payee, IERC20[] erc20Token, uint256[] amount);
+    // event Deposited(address indexed funder, ERC20 erc20Token, uint256 amount);
+    // event Withdrawn(address indexed payee, ERC20[] erc20Token, uint256[] amount);
     // event PayeeCandidateRegistered(address indexed payee);
     // event PayeeRegistered(address indexed payee);
     // event FunderRegistered(address indexed funder);

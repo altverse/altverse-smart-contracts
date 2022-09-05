@@ -17,7 +17,7 @@ import "./RoleBasedEscrow.sol";
  * withdrawal by the payee, or refunds to the depositors. 
  */
 contract ArbitrableEscrow is Initializable, RoleBasedEscrow  {
-    using SafeERC20 for IERC20;
+    using SafeERC20 for ERC20;
 
     event Disputed(address indexed caller);
 

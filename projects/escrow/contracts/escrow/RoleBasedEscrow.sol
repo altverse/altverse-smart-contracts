@@ -15,7 +15,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
  * withdraw them.
  */
 contract RoleBasedEscrow is Initializable, AccessControl {
-    using SafeERC20 for IERC20;
+    using SafeERC20 for ERC20;
     using Address for address payable;
 
     bytes32 public constant FACTORY_ROLE = keccak256("FACTORY_ROLE");
@@ -23,8 +23,8 @@ contract RoleBasedEscrow is Initializable, AccessControl {
     bytes32 public constant PAYEE_ROLE = keccak256("PAYEE_ROLE");
     bytes32 public constant CREATOR_ROLE = keccak256("CREATOR_ROLE");
     
-    event Deposited(address indexed funder, IERC20 erc20Token, uint256 amount);
-    event Withdrawn(address indexed payee, IERC20[] erc20Token, uint256[] amount);
+    event Deposited(address indexed funder, ERC20 erc20Token, uint256 amount);
+    event Withdrawn(address indexed payee, ERC20[] erc20Token, uint256[] amount);
     event PayeeCandidateRegistered(address indexed payee);
     event PayeeRegistered(address indexed payee);
     event FunderRegistered(address indexed funder);
@@ -71,14 +71,14 @@ contract RoleBasedEscrow is Initializable, AccessControl {
 
     string title;
 
-    IERC20[] fundedTokens;
+    ERC20[] fundedTokens;
 
     address[] public payeeCandidates;
     mapping (address => bytes32) candidatesIdentifier;
 
     address[] public payees;
     address[] public funders;
-    mapping (address => mapping (IERC20 => uint256)) public funds;
+    mapping (address => mapping (ERC20 => uint256)) public funds;
 
     bool public isBaseContract;
     address private _factory;
@@ -98,6 +98,8 @@ contract RoleBasedEscrow is Initializable, AccessControl {
     }
     
     function __Escrow_init(address funder, address payee, string memory title_) internal onlyInitializing { 
+        _state = State.INITIALIZED;
+
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(FACTORY_ROLE, msg.sender);
         
@@ -105,18 +107,17 @@ contract RoleBasedEscrow is Initializable, AccessControl {
         if (funder != address(0)) _registerFunder(funder);
 
         title = title_;
-        _state = State.INITIALIZED;
     }
 
     function __Escrow_init_unchained() internal onlyInitializing {
     }
 
-    function initializeAsFunder(address funder, address payee, string memory _title) public initializer {
+    function initializeAsFunder(address funder, address payee, string memory _title) external initializer {
           _setupRole(CREATOR_ROLE, funder);
         _initialize(funder, payee, _title);
     }
 
-    function initializeAsPayee(address funder, address payee, string memory _title) public initializer {
+    function initializeAsPayee(address funder, address payee, string memory _title) external initializer {
         _setupRole(CREATOR_ROLE, payee);
         _initialize(funder, payee, _title);
     }
@@ -186,7 +187,7 @@ contract RoleBasedEscrow is Initializable, AccessControl {
         require(state() >= State.INITIALIZED && state() <= State.ACTIVATED, "RoleBasedEscrow: can only deposit after INITIATED");
         require(msg.value > 0, "RoleBasedEscrow: Token amount must be greater than zero");
  
-        IERC20 erc20Token = IERC20(tokenAddress);
+        ERC20 erc20Token = ERC20(tokenAddress);
         erc20Token.safeTransferFrom(msg.sender, address(this), msg.value);
 
         _addTokenList(erc20Token);
@@ -215,15 +216,15 @@ contract RoleBasedEscrow is Initializable, AccessControl {
     }
 
     function _withdraw(address payee) private {
-        IERC20[] memory tokenWithdrawn = new IERC20[](fundedTokens.length);
+        ERC20[] memory tokenWithdrawn = new ERC20[](fundedTokens.length);
         uint256[] memory amountWithdrawn = new uint256[](fundedTokens.length);
 
         for (uint i = 0; i < fundedTokens.length; i++) {
-            IERC20 token = fundedTokens[i];
+            ERC20 token = fundedTokens[i];
             uint256 amount = funds[payee][token];
             if (amount > 0) {
-                token.transfer(payee, amount);
                 funds[payee][token] = 0;
+                token.safeTransfer(payee, amount);
 
                 tokenWithdrawn[i] = token;
                 amountWithdrawn[i] = amount;
@@ -260,7 +261,7 @@ contract RoleBasedEscrow is Initializable, AccessControl {
         
         // For each token funded
         for (uint tokenIndex = 0; tokenIndex < fundedTokens.length; tokenIndex++) {
-            IERC20 token = fundedTokens[tokenIndex];
+            ERC20 token = fundedTokens[tokenIndex];
             uint256 totalAmountPerToken = _totalAmountOf(token, funders);
             // Then distribute to payees equally
             if (totalAmountPerToken > 0 && payees.length > 0) {
@@ -293,7 +294,7 @@ contract RoleBasedEscrow is Initializable, AccessControl {
         emit FinalizeContract(msg.sender);
     }
 
-    function _totalAmountOf(IERC20 token, address[] memory parties) private view returns (uint256) {
+    function _totalAmountOf(ERC20 token, address[] memory parties) private view returns (uint256) {
         uint256 totalAmountPerToken = 0;
         for (uint index = 0; index < parties.length; index++) {
             address party = parties[index];
@@ -332,7 +333,7 @@ contract RoleBasedEscrow is Initializable, AccessControl {
         return false;
     }
 
-    function _addTokenList(IERC20 token) private {
+    function _addTokenList(ERC20 token) private {
         for (uint i = 0; i < fundedTokens.length; i++) {
             if (fundedTokens[i] == token) {
                 fundedTokens[i] = token;
