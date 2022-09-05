@@ -188,7 +188,6 @@ contract RoleBasedEscrow is Initializable, AccessControl {
         require(msg.value > 0, "RoleBasedEscrow: Token amount must be greater than zero");
  
         ERC20 erc20Token = ERC20(tokenAddress);
-        erc20Token.safeTransferFrom(msg.sender, address(this), msg.value);
 
         _addTokenList(erc20Token);
         _addFunder(msg.sender);
@@ -196,6 +195,7 @@ contract RoleBasedEscrow is Initializable, AccessControl {
         funds[msg.sender][erc20Token] += msg.value;
 
         emit Deposited(msg.sender, erc20Token, msg.value);
+        erc20Token.safeTransferFrom(msg.sender, address(this), msg.value);
     }
 
     /**

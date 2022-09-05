@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.7.0 <0.9.0;
+pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 
@@ -18,24 +18,28 @@ contract ArbitrableEscrowFactory {
         arbitrableEscrowAddress = _arbitrableEscrowAddress;
     }
 
-    function createEscrowAsFunder(address payee, string memory title) public {
+    function createEscrowAsFunder(address payee, string memory title) external {
         require(arbitrableEscrowAddress != address(0), "Escrow contract does not exist");
 
         ArbitrableEscrow newEscrow = ArbitrableEscrow(Clones.clone(arbitrableEscrowAddress));
-        deployedEscrows[msg.sender].push(newEscrow);
-        newEscrow.initializeAsFunder(msg.sender, payee, title);
 
         emit EscrowCreated(msg.sender, msg.sender, payee, newEscrow);
+
+        deployedEscrows[msg.sender].push(newEscrow);
+
+        newEscrow.initializeAsFunder(msg.sender, payee, title);
     }
 
-    function createEscrowAsPayee(address funder, string memory title) public {
+    function createEscrowAsPayee(address funder, string memory title) external {
         require(arbitrableEscrowAddress != address(0), "Escrow contract does not exist");
 
         ArbitrableEscrow newEscrow = ArbitrableEscrow(Clones.clone(arbitrableEscrowAddress));
-        deployedEscrows[msg.sender].push(newEscrow);
-        newEscrow.initializeAsPayee(funder, msg.sender, title);
-
+        
         emit EscrowCreated(msg.sender, funder, msg.sender, newEscrow);
+        
+        deployedEscrows[msg.sender].push(newEscrow);
+
+        newEscrow.initializeAsPayee(funder, msg.sender, title);
     }
 
     function escrowsOf(address _owner) external view returns (ArbitrableEscrow[] memory) {

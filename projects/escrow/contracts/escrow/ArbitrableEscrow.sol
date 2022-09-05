@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.7.0 <0.9.0;
+pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 
@@ -35,7 +35,7 @@ contract ArbitrableEscrow is Initializable, RoleBasedEscrow  {
      * @param payee of the deposits.
      */
     function _initialize(address funder, address payee, string memory title_) internal override {
-        require(isBaseContract == false, "ArbitrableEscrow: The base contract cannot be initialized");
+        require(!isBaseContract, "ArbitrableEscrow: The base contract cannot be initialized");
         require(payee != funder, "ArbitrableEscrow: payee cannot be itself");
 
         __ArbitrableEscrow_init();
