@@ -111,7 +111,7 @@ contract RoleBasedEscrow is Initializable, AccessControl {
 
 
     function initializeAsFunder(address funder, address payee, string memory _title) external initializer {
-          _setupRole(CREATOR_ROLE, funder);
+        _setupRole(CREATOR_ROLE, funder);
         _initialize(funder, payee, _title);
     }
 
@@ -130,10 +130,10 @@ contract RoleBasedEscrow is Initializable, AccessControl {
     /**
      * @dev Register payee
      */
-    function registerAsPayee(bytes32 identifier) public {
+    function registerAsPayee(bytes32 identifier) external {
         require(state() < State.ACTIVATED, "RoleBasedEscrow: can only deposit while INITIATED");
         require(!candidateExist(msg.sender), "RoleBasedEscrow: cannot register twice as payee candidate");
-         require(!funderExist(msg.sender), "RoleBasedEscrow: funder cannot be a payee");
+        require(!funderExist(msg.sender), "RoleBasedEscrow: funder cannot be a payee");
 
         payeeCandidates.push(msg.sender);
         candidatesIdentifier[msg.sender] = identifier;
@@ -254,7 +254,7 @@ contract RoleBasedEscrow is Initializable, AccessControl {
      *
      * Emits a {Withdrawn} event.
      */
-    function settle(bool autoWithdraw) public virtual onlyFactoryOrFunder {
+    function settle(bool autoWithdraw) external virtual onlyFactoryOrFunder {
         require(state() == State.ACTIVATED, "RoleBasedEscrow: Escrow can be finalized (settled) on ACTIVATED state only");
         
         // For each token funded
