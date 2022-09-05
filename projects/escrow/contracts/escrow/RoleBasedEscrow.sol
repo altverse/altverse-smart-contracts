@@ -353,11 +353,4 @@ contract RoleBasedEscrow is Initializable, AccessControl {
         // Add new funder on the list.
         _registerFunder(funder);
     }
-
-    /**
-     * @dev This empty reserved space is put in place to allow future versions to add new
-     * variables without shifting down storage in the inheritance chain.
-     * See https://docs.openzeppelin.com/contracts/4.x/#storage_gaps
-     */
-    uint256[49] private __gap;
 }
