@@ -770,5 +770,373 @@ describe("ArbitrableEscrow", function () {
         expect(await contractWithFunder.candidateExist(payeeAccount.address)).to.be.false;
       });
     });
+
+    describe("Right after registerAsPayee all public calls made by funder should work properly", async function () {
+      let escrowAddress: string;
+      let arbitrableEscrowFactory;
+      let fakeUSDToken: ERC20FakeUSDToken;
+      let fakeUSDToken2: ERC20FakeUSDToken2;
+      let funderAccount: SignerWithAddress;
+      let otherAccount1: SignerWithAddress;
+      let otherAccount2: SignerWithAddress;
+      let payeeAccount: SignerWithAddress;
+
+      this.beforeEach(async function () {
+        const fixture = await createFunderEscrow(false);
+        escrowAddress = fixture.eventResult?.escrow;
+        arbitrableEscrowFactory = fixture.arbitrableEscrowFactory;
+        fakeUSDToken = fixture.fakeUSDToken;
+        fakeUSDToken2 = fixture.fakeUSDToken2;
+        funderAccount = fixture.funderAccount;
+        otherAccount1 = fixture.otherAccount1;
+        otherAccount2 = fixture.otherAccount2;
+        payeeAccount = fixture.payeeAccount;
+      });
+
+      const goToRegisterAsPayeeStep = async ({
+        escrowAddress,
+        funderAccount,
+        payeeAccount,
+       }: {
+        escrowAddress: string;
+        funderAccount: SignerWithAddress;
+        payeeAccount: SignerWithAddress;
+      }) => {
+        const contractWithFunder = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, funderAccount);
+        const secretIdentifier = ethers.utils.formatBytes32String("0123456789abcdef");
+        const contractWithPayee = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, payeeAccount);
+        await contractWithPayee.registerAsPayee(secretIdentifier);
+        return contractWithFunder;
+      };
+
+      it("requestArbitration: should be possible only when the contract is activated", async function () {
+        const contractWithFunder = await goToRegisterAsPayeeStep({ escrowAddress, funderAccount, payeeAccount });
+        await expect(contractWithFunder.requestArbitration()).to.be.revertedWith("ArbitrableEscrow: can only start arbitration while ACTIVE");
+      });
+
+      it("initializeAsFunder: if contract is already initalized initializeAsFunder should not be possible", async function () {
+        const contractWithFunder = await goToRegisterAsPayeeStep({ escrowAddress, funderAccount, payeeAccount });
+        await expect(contractWithFunder.initializeAsFunder(funderAccount.address, payeeAccount.address, "")).to.be.reverted;
+      });
+
+      it("initializeAsPayee: if contract is already initalized initializeAsPayee should not be possible", async function () {
+        const contractWithFunder = await goToRegisterAsPayeeStep({ escrowAddress, funderAccount, payeeAccount });
+        await expect(contractWithFunder.initializeAsPayee(funderAccount.address, payeeAccount.address, "")).to.be.reverted;
+      });
+
+      it("registerAsPayee: if the contract creator is funder, then he cannot be register himself as a payee", async function () {
+        const contractWithFunder = await goToRegisterAsPayeeStep({ escrowAddress, funderAccount, payeeAccount });
+        const secretIdentifier = ethers.utils.formatBytes32String("EVILFUNDER");
+        await expect(contractWithFunder.registerAsPayee(secretIdentifier)).to.be.reverted;
+      });
+
+      it("grantPayeeRole: since a candidate is ready, should not be reverted", async function () {
+        const contractWithFunder = await goToRegisterAsPayeeStep({ escrowAddress, funderAccount, payeeAccount });
+        await expect(contractWithFunder.grantPayeeRole([payeeAccount.address])).not.to.be.reverted;
+      });
+
+      // deposit: Since deposit changes the state of this contarct to the next step, it does not test here.
+
+      it("withdraw: withdraw should be possible, although there's no effect at all", async function () {
+        const contractWithFunder = await goToRegisterAsPayeeStep({ escrowAddress, funderAccount, payeeAccount });
+        await expect(contractWithFunder.withdraw()).not.to.be.reverted;
+      });
+
+      it("withdrawalAllowed: funder should be possible", async function () {
+        const contractWithFunder = await goToRegisterAsPayeeStep({ escrowAddress, funderAccount, payeeAccount });
+        // Since there is no deposit in this test, there is no effect at all. But withdarwl should be allowed.
+        expect(await contractWithFunder.withdrawalAllowed(funderAccount.address)).to.equals(true);
+      });
+
+      it("activateContract should be reverted since no payee is set", async function () {
+        const contractWithFunder = await goToRegisterAsPayeeStep({ escrowAddress, funderAccount, payeeAccount });
+        await expect(contractWithFunder.activateContract()).to.be.reverted;
+      });
+
+      it("settle should be reverted since the state of the contract is INITIALIZED", async function () {
+        const contractWithFunder = await goToRegisterAsPayeeStep({ escrowAddress, funderAccount, payeeAccount });
+        await expect(contractWithFunder.settle(false)).to.be.revertedWith("RoleBasedEscrow: Escrow can be finalized (settled) on ACTIVATED state only");
+      });
+
+      it("state should react properly", async function () {
+        const contractWithFunder = await goToRegisterAsPayeeStep({ escrowAddress, funderAccount, payeeAccount });
+        expect(await contractWithFunder.state()).to.equals(0);
+      });
+
+      it("payeeExist should react properly", async function () {
+        const contractWithFunder = await goToRegisterAsPayeeStep({ escrowAddress, funderAccount, payeeAccount });
+        expect(await contractWithFunder.payeeExist(funderAccount.address)).to.be.false;
+        expect(await contractWithFunder.payeeExist(payeeAccount.address)).to.be.false;
+      });
+
+      it("funderExist should react properly", async function () {
+        const contractWithFunder = await goToRegisterAsPayeeStep({ escrowAddress, funderAccount, payeeAccount });
+        expect(await contractWithFunder.funderExist(funderAccount.address)).to.be.true;
+        expect(await contractWithFunder.funderExist(payeeAccount.address)).to.be.false;
+      });
+
+      it("candidateExist should react properly", async function () {
+        const contractWithFunder = await goToRegisterAsPayeeStep({ escrowAddress, funderAccount, payeeAccount });
+        expect(await contractWithFunder.candidateExist(funderAccount.address)).to.be.false;
+        expect(await contractWithFunder.candidateExist(payeeAccount.address)).to.be.true;
+      });
+    });
+
+    describe("Right after deposit all public calls made by funder should work properly", async function () {
+      let escrowAddress: string;
+      let arbitrableEscrowFactory;
+      let fakeUSDToken: ERC20FakeUSDToken;
+      let fakeUSDToken2: ERC20FakeUSDToken2;
+      let funderAccount: SignerWithAddress;
+      let otherAccount1: SignerWithAddress;
+      let otherAccount2: SignerWithAddress;
+      let payeeAccount: SignerWithAddress;
+
+      this.beforeEach(async function () {
+        const fixture = await createFunderEscrow(false);
+        escrowAddress = fixture.eventResult?.escrow;
+        arbitrableEscrowFactory = fixture.arbitrableEscrowFactory;
+        fakeUSDToken = fixture.fakeUSDToken;
+        fakeUSDToken2 = fixture.fakeUSDToken2;
+        funderAccount = fixture.funderAccount;
+        otherAccount1 = fixture.otherAccount1;
+        otherAccount2 = fixture.otherAccount2;
+        payeeAccount = fixture.payeeAccount;
+      });
+
+      const goToDepositStep = async ({
+        escrowAddress,
+        funderAccount,
+        payeeAccount,
+        fakeUSDToken,
+       }: {
+        escrowAddress: string;
+        funderAccount: SignerWithAddress;
+        payeeAccount: SignerWithAddress;
+        fakeUSDToken: ERC20FakeUSDToken;
+      }) => {
+        const contractWithFunder = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, funderAccount);
+        const secretIdentifier = ethers.utils.formatBytes32String("0123456789abcdef");
+        const contractWithPayee = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, payeeAccount);
+        await contractWithPayee.registerAsPayee(secretIdentifier);
+
+        // 3. The funder first approve an ERC20 token
+        // The funder has 1000 USDT now
+        await fakeUSDToken.transfer(funderAccount.address, 1000);
+        // Spending 300 USDT is allowed
+        await fakeUSDToken.connect(funderAccount).approve(escrowAddress, 1000);
+
+        const toDeposit = 300;
+        await contractWithFunder.deposit(fakeUSDToken.address, { value: toDeposit });
+        return contractWithFunder;
+      };
+
+      it("requestArbitration: should be possible only when the contract is activated", async function () {
+        const contractWithFunder = await goToDepositStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
+        await expect(contractWithFunder.requestArbitration()).to.be.revertedWith("ArbitrableEscrow: can only start arbitration while ACTIVE");
+      });
+
+      it("initializeAsFunder: if contract is already initalized initializeAsFunder should not be possible", async function () {
+        const contractWithFunder = await goToDepositStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
+        await expect(contractWithFunder.initializeAsFunder(funderAccount.address, payeeAccount.address, "")).to.be.reverted;
+      });
+
+      it("initializeAsPayee: if contract is already initalized initializeAsPayee should not be possible", async function () {
+        const contractWithFunder = await goToDepositStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
+        await expect(contractWithFunder.initializeAsPayee(funderAccount.address, payeeAccount.address, "")).to.be.reverted;
+      });
+
+      it("registerAsPayee: if the contract creator is funder, then he cannot be register himself as a payee", async function () {
+        const contractWithFunder = await goToDepositStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
+        const secretIdentifier = ethers.utils.formatBytes32String("EVILFUNDER");
+        await expect(contractWithFunder.registerAsPayee(secretIdentifier)).to.be.reverted;
+      });
+
+      it("grantPayeeRole: since a candidate is ready, should not be reverted", async function () {
+        const contractWithFunder = await goToDepositStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
+        await expect(contractWithFunder.grantPayeeRole([payeeAccount.address])).not.to.be.reverted;
+      });
+
+      it("deposit: additional `deposit` should deposit more", async function () {
+        const contractWithFunder = await goToDepositStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
+        await expect(contractWithFunder.deposit(fakeUSDToken.address, { value: 300 })).not.to.be.reverted;
+        expect(await contractWithFunder.funds(funderAccount.address, fakeUSDToken.address)).to.equals(600); // 300 + 300
+      });
+
+      it("withdraw: withdraw should be possible and balance should match", async function () {
+        const contractWithFunder = await goToDepositStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
+        await expect(contractWithFunder.withdraw()).not.to.be.reverted;
+        expect(await contractWithFunder.funds(funderAccount.address, fakeUSDToken.address)).to.equals(0);
+        expect(+await fakeUSDToken.balanceOf(funderAccount.address)).to.equals(1000);
+      });
+
+      it("withdrawalAllowed: funder should be possible", async function () {
+        const contractWithFunder = await goToDepositStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
+        expect(await contractWithFunder.withdrawalAllowed(funderAccount.address)).to.equals(true);
+      });
+
+      it("activateContract should be reverted since no payee is set", async function () {
+        const contractWithFunder = await goToDepositStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
+        await expect(contractWithFunder.activateContract()).to.be.reverted;
+      });
+
+      it("settle should be reverted since the state of the contract is INITIALIZED", async function () {
+        const contractWithFunder = await goToDepositStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
+        await expect(contractWithFunder.settle(false)).to.be.revertedWith("RoleBasedEscrow: Escrow can be finalized (settled) on ACTIVATED state only");
+      });
+
+      it("state should react properly", async function () {
+        const contractWithFunder = await goToDepositStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
+        expect(await contractWithFunder.state()).to.equals(0);
+      });
+
+      it("payeeExist should react properly", async function () {
+        const contractWithFunder = await goToDepositStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
+        expect(await contractWithFunder.payeeExist(funderAccount.address)).to.be.false;
+        expect(await contractWithFunder.payeeExist(payeeAccount.address)).to.be.false;
+      });
+
+      it("funderExist should react properly", async function () {
+        const contractWithFunder = await goToDepositStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
+        expect(await contractWithFunder.funderExist(funderAccount.address)).to.be.true;
+        expect(await contractWithFunder.funderExist(payeeAccount.address)).to.be.false;
+      });
+
+      it("candidateExist should react properly", async function () {
+        const contractWithFunder = await goToDepositStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
+        expect(await contractWithFunder.candidateExist(funderAccount.address)).to.be.false;
+        expect(await contractWithFunder.candidateExist(payeeAccount.address)).to.be.true;
+      });
+    });
+
+    describe("Right after deposit all public calls made by funder should work properly", async function () {
+      let escrowAddress: string;
+      let arbitrableEscrowFactory;
+      let fakeUSDToken: ERC20FakeUSDToken;
+      let fakeUSDToken2: ERC20FakeUSDToken2;
+      let funderAccount: SignerWithAddress;
+      let otherAccount1: SignerWithAddress;
+      let otherAccount2: SignerWithAddress;
+      let payeeAccount: SignerWithAddress;
+
+      this.beforeEach(async function () {
+        const fixture = await createFunderEscrow(false);
+        escrowAddress = fixture.eventResult?.escrow;
+        arbitrableEscrowFactory = fixture.arbitrableEscrowFactory;
+        fakeUSDToken = fixture.fakeUSDToken;
+        fakeUSDToken2 = fixture.fakeUSDToken2;
+        funderAccount = fixture.funderAccount;
+        otherAccount1 = fixture.otherAccount1;
+        otherAccount2 = fixture.otherAccount2;
+        payeeAccount = fixture.payeeAccount;
+      });
+
+      const goToGrantPayeeRoleStep = async ({
+        escrowAddress,
+        funderAccount,
+        payeeAccount,
+        fakeUSDToken,
+       }: {
+        escrowAddress: string;
+        funderAccount: SignerWithAddress;
+        payeeAccount: SignerWithAddress;
+        fakeUSDToken: ERC20FakeUSDToken;
+      }) => {
+        const contractWithFunder = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, funderAccount);
+        const secretIdentifier = ethers.utils.formatBytes32String("0123456789abcdef");
+        const contractWithPayee = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, payeeAccount);
+        await contractWithPayee.registerAsPayee(secretIdentifier);
+
+        // 3. The funder first approve an ERC20 token
+        // The funder has 1000 USDT now
+        await fakeUSDToken.transfer(funderAccount.address, 1000);
+        // Spending 300 USDT is allowed
+        await fakeUSDToken.connect(funderAccount).approve(escrowAddress, 1000);
+
+        const toDeposit = 300;
+        await contractWithFunder.deposit(fakeUSDToken.address, { value: toDeposit });
+        await contractWithFunder.grantPayeeRole([payeeAccount.address]);
+        return contractWithFunder;
+      };
+
+      it("requestArbitration: should be possible only when the contract is activated", async function () {
+        const contractWithFunder = await goToGrantPayeeRoleStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
+        await expect(contractWithFunder.requestArbitration()).to.be.revertedWith("ArbitrableEscrow: can only start arbitration while ACTIVE");
+      });
+
+      it("initializeAsFunder: if contract is already initalized initializeAsFunder should not be possible", async function () {
+        const contractWithFunder = await goToGrantPayeeRoleStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
+        await expect(contractWithFunder.initializeAsFunder(funderAccount.address, payeeAccount.address, "")).to.be.reverted;
+      });
+
+      it("initializeAsPayee: if contract is already initalized initializeAsPayee should not be possible", async function () {
+        const contractWithFunder = await goToGrantPayeeRoleStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
+        await expect(contractWithFunder.initializeAsPayee(funderAccount.address, payeeAccount.address, "")).to.be.reverted;
+      });
+
+      it("registerAsPayee: if the contract creator is funder, then he cannot be register himself as a payee", async function () {
+        const contractWithFunder = await goToGrantPayeeRoleStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
+        const secretIdentifier = ethers.utils.formatBytes32String("EVILFUNDER");
+        await expect(contractWithFunder.registerAsPayee(secretIdentifier)).to.be.reverted;
+      });
+
+      it("grantPayeeRole: since a candidate has been just set as a payee, it should be reverted with a message", async function () {
+        const contractWithFunder = await goToGrantPayeeRoleStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
+        await expect(contractWithFunder.grantPayeeRole([payeeAccount.address])).to.be.revertedWith('RoleBasedEscrow: cannot register twice as payee');
+      });
+
+      it("deposit: additional `deposit` should deposit more", async function () {
+        const contractWithFunder = await goToGrantPayeeRoleStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
+        await expect(contractWithFunder.deposit(fakeUSDToken.address, { value: 300 })).not.to.be.reverted;
+        expect(await contractWithFunder.funds(funderAccount.address, fakeUSDToken.address)).to.equals(600); // 300 + 300
+      });
+
+      it("withdraw: withdraw should be possible and balance should match", async function () {
+        const contractWithFunder = await goToGrantPayeeRoleStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
+        await expect(contractWithFunder.withdraw()).not.to.be.reverted;
+        expect(await contractWithFunder.funds(funderAccount.address, fakeUSDToken.address)).to.equals(0);
+        expect(+await fakeUSDToken.balanceOf(funderAccount.address)).to.equals(1000);
+      });
+
+      it("withdrawalAllowed: funder should be possible", async function () {
+        const contractWithFunder = await goToGrantPayeeRoleStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
+        expect(await contractWithFunder.withdrawalAllowed(funderAccount.address)).to.equals(true);
+      });
+
+      it("activateContract should not be reverted since a payee is set", async function () {
+        const contractWithFunder = await goToGrantPayeeRoleStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
+        await expect(contractWithFunder.activateContract()).not.to.be.reverted;
+      });
+
+      it("settle should be reverted since the state of the contract is INITIALIZED", async function () {
+        const contractWithFunder = await goToGrantPayeeRoleStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
+        await expect(contractWithFunder.settle(false)).to.be.revertedWith("RoleBasedEscrow: Escrow can be finalized (settled) on ACTIVATED state only");
+      });
+
+      it("state should react properly", async function () {
+        const contractWithFunder = await goToGrantPayeeRoleStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
+        expect(await contractWithFunder.state()).to.equals(0);
+      });
+
+      it("payeeExist should react properly", async function () {
+        const contractWithFunder = await goToGrantPayeeRoleStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
+        expect(await contractWithFunder.payeeExist(funderAccount.address)).to.be.false;
+        // now that the payee has been set it should exist
+        expect(await contractWithFunder.payeeExist(payeeAccount.address)).to.be.true;
+      });
+
+      it("funderExist should react properly", async function () {
+        const contractWithFunder = await goToGrantPayeeRoleStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
+        expect(await contractWithFunder.funderExist(funderAccount.address)).to.be.true;
+        expect(await contractWithFunder.funderExist(payeeAccount.address)).to.be.false;
+      });
+
+      it("candidateExist should react properly", async function () {
+        const contractWithFunder = await goToGrantPayeeRoleStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
+        expect(await contractWithFunder.candidateExist(funderAccount.address)).to.be.false;
+        // although that the candidate has become actual payee it should still be true
+        expect(await contractWithFunder.candidateExist(payeeAccount.address)).to.be.true;
+      });
+    });
   });
 });
