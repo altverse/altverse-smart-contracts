@@ -22,13 +22,6 @@ contract ArbitrableEscrow is Initializable, RoleBasedEscrow  {
     event Disputed(address indexed caller);
 
     bool public isInDispute;
-    
-    function __ArbitrableEscrow_init() internal onlyInitializing {
-        __ArbitrableEscrow_init_unchained();
-    }
-
-    function __ArbitrableEscrow_init_unchained() internal onlyInitializing {
-    }
 
     /**
      * @dev Initializer. Since the contract will be cloned and constructor is redundant, we need initialize function.
@@ -38,7 +31,6 @@ contract ArbitrableEscrow is Initializable, RoleBasedEscrow  {
         require(!isBaseContract, "ArbitrableEscrow: The base contract cannot be initialized");
         require(payee != funder, "ArbitrableEscrow: payee cannot be itself");
 
-        __ArbitrableEscrow_init();
         __Escrow_init(funder, payee, title_);
     }
 

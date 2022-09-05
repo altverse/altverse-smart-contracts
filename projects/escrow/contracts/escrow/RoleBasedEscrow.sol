@@ -109,8 +109,6 @@ contract RoleBasedEscrow is Initializable, AccessControl {
         title = title_;
     }
 
-    function __Escrow_init_unchained() internal onlyInitializing {
-    }
 
     function initializeAsFunder(address funder, address payee, string memory _title) external initializer {
           _setupRole(CREATOR_ROLE, funder);
@@ -123,11 +121,10 @@ contract RoleBasedEscrow is Initializable, AccessControl {
     }
 
     function _initialize(address funder, address payee, string memory _title) internal virtual {
-        require(isBaseContract == false, "ArbitrableEscrow: The base contract cannot be initialized");
+        require(!isBaseContract, "ArbitrableEscrow: The base contract cannot be initialized");
         require(payee != funder, "ArbitrableEscrow: payee cannot be itself");
 
         __Escrow_init(funder, payee, _title);
-        __Escrow_init_unchained();
     }
 
     /**
@@ -135,8 +132,8 @@ contract RoleBasedEscrow is Initializable, AccessControl {
      */
     function registerAsPayee(bytes32 identifier) public {
         require(state() < State.ACTIVATED, "RoleBasedEscrow: can only deposit while INITIATED");
-        require(candidateExist(msg.sender) == false, "RoleBasedEscrow: cannot register twice as payee candidate");
-         require(funderExist(msg.sender) == false, "RoleBasedEscrow: funder cannot be a payee");
+        require(!candidateExist(msg.sender), "RoleBasedEscrow: cannot register twice as payee candidate");
+         require(!funderExist(msg.sender), "RoleBasedEscrow: funder cannot be a payee");
 
         payeeCandidates.push(msg.sender);
         candidatesIdentifier[msg.sender] = identifier;
@@ -146,8 +143,8 @@ contract RoleBasedEscrow is Initializable, AccessControl {
 
     function _registerPayee(address payee) internal {
         require(payee != address(0), "RoleBasedEscrow: payee address must not be empty");
-        require(payeeExist(payee) == false, "RoleBasedEscrow: cannot register twice as payee");
-        require(funderExist(payee) == false, "RoleBasedEscrow: funder cannot be a payee");
+        require(!payeeExist(payee), "RoleBasedEscrow: cannot register twice as payee");
+        require(!funderExist(payee), "RoleBasedEscrow: funder cannot be a payee");
         
         payees.push(payee);
         _setupRole(PAYEE_ROLE, payee);
@@ -170,8 +167,8 @@ contract RoleBasedEscrow is Initializable, AccessControl {
 
     function _registerFunder(address funder) internal {
         require(funder != address(0), "RoleBasedEscrow: funder address must not be empty");
-        require(funderExist(funder) == false, "RoleBasedEscrow: cannot register twice as funder");
-        require(payeeExist(funder) == false, "RoleBasedEscrow: payee cannot be a funder");
+        require(!funderExist(funder), "RoleBasedEscrow: cannot register twice as funder");
+        require(!payeeExist(funder), "RoleBasedEscrow: payee cannot be a funder");
 
         funders.push(funder);
         _setupRole(FUNDER_ROLE, funder);
@@ -195,6 +192,7 @@ contract RoleBasedEscrow is Initializable, AccessControl {
         funds[msg.sender][erc20Token] += msg.value;
 
         emit Deposited(msg.sender, erc20Token, msg.value);
+
         erc20Token.safeTransferFrom(msg.sender, address(this), msg.value);
     }
 
