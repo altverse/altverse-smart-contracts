@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "./ArbitrableEscrowFactory.sol";
 
 /**
  * @title Escrow
@@ -91,15 +92,14 @@ contract RoleBasedEscrow is Initializable, AccessControl {
         // The base contract must not be initialized, since we are using clones.
         isBaseContract = true;
 
-        _factory = msg.sender;
-
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(FACTORY_ROLE, msg.sender);
     }
     
     function __Escrow_init(address funder, address payee, string memory title_) internal onlyInitializing { 
         _state = State.INITIALIZED;
-
+        _factory = msg.sender;
+        
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(FACTORY_ROLE, msg.sender);
         
@@ -183,7 +183,7 @@ contract RoleBasedEscrow is Initializable, AccessControl {
     function deposit(address tokenAddress) payable external {
         require(state() >= State.INITIALIZED && state() <= State.ACTIVATED, "RoleBasedEscrow: can only deposit after INITIATED");
         require(msg.value > 0, "RoleBasedEscrow: Token amount must be greater than zero");
- 
+
         ERC20 erc20Token = ERC20(tokenAddress);
 
         _addTokenList(erc20Token);
@@ -338,6 +338,8 @@ contract RoleBasedEscrow is Initializable, AccessControl {
                 return;
             }
         }
+
+        require(fundedTokens.length < ArbitrableEscrowFactory( _factory).maxNumberOfTokensAllowed());
 
         fundedTokens.push(token);
     }

@@ -793,15 +793,7 @@ describe("ArbitrableEscrow", function () {
         payeeAccount = fixture.payeeAccount;
       });
 
-      const goToRegisterAsPayeeStep = async ({
-        escrowAddress,
-        funderAccount,
-        payeeAccount,
-       }: {
-        escrowAddress: string;
-        funderAccount: SignerWithAddress;
-        payeeAccount: SignerWithAddress;
-      }) => {
+      const goToRegisterAsPayeeStep = async ({ escrowAddress, funderAccount, payeeAccount }: { escrowAddress: string; funderAccount: SignerWithAddress; payeeAccount: SignerWithAddress }) => {
         const contractWithFunder = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, funderAccount);
         const secretIdentifier = ethers.utils.formatBytes32String("0123456789abcdef");
         const contractWithPayee = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, payeeAccount);
@@ -909,7 +901,7 @@ describe("ArbitrableEscrow", function () {
         funderAccount,
         payeeAccount,
         fakeUSDToken,
-       }: {
+      }: {
         escrowAddress: string;
         funderAccount: SignerWithAddress;
         payeeAccount: SignerWithAddress;
@@ -967,7 +959,7 @@ describe("ArbitrableEscrow", function () {
         const contractWithFunder = await goToDepositStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
         await expect(contractWithFunder.withdraw()).not.to.be.reverted;
         expect(await contractWithFunder.funds(funderAccount.address, fakeUSDToken.address)).to.equals(0);
-        expect(+await fakeUSDToken.balanceOf(funderAccount.address)).to.equals(1000);
+        expect(+(await fakeUSDToken.balanceOf(funderAccount.address))).to.equals(1000);
       });
 
       it("withdrawalAllowed: funder should be possible", async function () {
@@ -1036,7 +1028,7 @@ describe("ArbitrableEscrow", function () {
         funderAccount,
         payeeAccount,
         fakeUSDToken,
-       }: {
+      }: {
         escrowAddress: string;
         funderAccount: SignerWithAddress;
         payeeAccount: SignerWithAddress;
@@ -1082,7 +1074,7 @@ describe("ArbitrableEscrow", function () {
 
       it("grantPayeeRole: since a candidate has been just set as a payee, it should be reverted with a message", async function () {
         const contractWithFunder = await goToGrantPayeeRoleStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
-        await expect(contractWithFunder.grantPayeeRole([payeeAccount.address])).to.be.revertedWith('RoleBasedEscrow: cannot register twice as payee');
+        await expect(contractWithFunder.grantPayeeRole([payeeAccount.address])).to.be.revertedWith("RoleBasedEscrow: cannot register twice as payee");
       });
 
       it("deposit: additional `deposit` should deposit more", async function () {
@@ -1095,7 +1087,7 @@ describe("ArbitrableEscrow", function () {
         const contractWithFunder = await goToGrantPayeeRoleStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
         await expect(contractWithFunder.withdraw()).not.to.be.reverted;
         expect(await contractWithFunder.funds(funderAccount.address, fakeUSDToken.address)).to.equals(0);
-        expect(+await fakeUSDToken.balanceOf(funderAccount.address)).to.equals(1000);
+        expect(+(await fakeUSDToken.balanceOf(funderAccount.address))).to.equals(1000);
       });
 
       it("withdrawalAllowed: funder should be possible", async function () {
