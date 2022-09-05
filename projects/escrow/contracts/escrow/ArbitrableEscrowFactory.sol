@@ -32,8 +32,8 @@ contract ArbitrableEscrowFactory {
         require(arbitrableEscrowAddress != address(0), "Escrow contract does not exist");
 
         ArbitrableEscrow newEscrow = ArbitrableEscrow(Clones.clone(arbitrableEscrowAddress));
-        newEscrow.initializeAsPayee(funder, msg.sender, title);
         deployedEscrows[msg.sender].push(newEscrow);
+        newEscrow.initializeAsPayee(funder, msg.sender, title);
 
         emit EscrowCreated(msg.sender, funder, msg.sender, newEscrow);
     }
