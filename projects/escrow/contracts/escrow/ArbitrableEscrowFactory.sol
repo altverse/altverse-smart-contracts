@@ -13,6 +13,7 @@ contract ArbitrableEscrowFactory is Ownable {
     address public arbitrableEscrowAddress;
     
     event EscrowCreated(address indexed creator, address indexed funder, address indexed payee, ArbitrableEscrow escrow);
+    event MaxTokenAllowance(uint8 oldAllowance, uint8 newAllowance);
 
     mapping(address => ArbitrableEscrow[]) public deployedEscrows;
 
@@ -28,6 +29,9 @@ contract ArbitrableEscrowFactory is Ownable {
 
     function updateMaxTokenAllowance(uint8 allowance) external onlyOwner {
         require(_maxNumberOfTokens > 0, "Token allowance must be greater than 0");
+
+        emit MaxTokenAllowance(_maxNumberOfTokens, allowance);
+        
         _maxNumberOfTokens = allowance;
     }
 
@@ -55,7 +59,7 @@ contract ArbitrableEscrowFactory is Ownable {
         newEscrow.initializeAsPayee(funder, msg.sender, title);
     }
 
-    function escrowsOf(address _owner) external view returns (ArbitrableEscrow[] memory) {
-        return deployedEscrows[_owner];
+    function escrowsOf(address _escrowOwner) external view returns (ArbitrableEscrow[] memory) {
+        return deployedEscrows[_escrowOwner];
     }
 }
