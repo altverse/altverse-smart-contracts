@@ -187,6 +187,18 @@ describe("ArbitrableEscrow", function () {
     });
   });
 
+  describe("Metadata", function () {
+    it("Should provide correct uri", async function () {
+      const { eventResult: funderWithoutPayeeEventResult, funderAccount, otherAccount1, otherAccount2, otherAccount3, fakeUSDToken } = await createFunderEscrow(false);
+
+      const escrow = await ethers.getContractAt("ArbitrableEscrow", funderWithoutPayeeEventResult?.escrow);
+      const baseUri = process.env.METADATA_BASE_URL;
+      console.log(baseUri);
+
+      expect(await escrow.escrowURI()).to.equal(`${baseUri}/${escrow.address}`);
+    });
+  });
+
   describe("Registeration", function () {
     it("Should set correct roles when registering as funder", async function () {
       // Funder creates.
@@ -510,13 +522,14 @@ describe("ArbitrableEscrow", function () {
   });
 
   describe("Events", function () {
+    // TODOs:
     // event Deposited(address indexed funder, ERC20 erc20Token, uint256 amount);
     // event Withdrawn(address indexed payee, ERC20[] erc20Token, uint256[] amount);
     // event PayeeCandidateRegistered(address indexed payee);
     // event PayeeRegistered(address indexed payee);
     // event FunderRegistered(address indexed funder);
     // event ContractActivated(address indexed funder);
-    // event FinalizeContract(address indexed sender);
+    // event ContractFinalized(address indexed sender);
     it("Should emit FunderRegistered event when depositing", async function () {
       const { eventResult, fakeUSDToken, funderAccount } = await createPayeeEscrow(false);
 

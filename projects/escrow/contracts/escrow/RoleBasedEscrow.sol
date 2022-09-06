@@ -9,13 +9,14 @@ import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./ArbitrableEscrowFactory.sol";
+import "./EscrowMetadata.sol";
 
 /**
  * @title Escrow
  * @dev Base escrow contract, holds funds designated for a payee until they
  * withdraw them.
  */
-contract RoleBasedEscrow is Initializable, AccessControl {
+contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
     using SafeERC20 for ERC20;
     using Address for address payable;
 
@@ -30,7 +31,7 @@ contract RoleBasedEscrow is Initializable, AccessControl {
     event PayeeRegistered(address indexed payee);
     event FunderRegistered(address indexed funder);
     event ContractActivated(address indexed creator);
-    event FinalizeContract(address indexed sender);
+    event ContractFinalized(address indexed sender);
 
     modifier onlyFactory() {
         require(hasRole(FACTORY_ROLE, msg.sender), "RoleBasedEscrow: Only the factory can call this function.");
@@ -99,16 +100,15 @@ contract RoleBasedEscrow is Initializable, AccessControl {
     function __Escrow_init(address funder, address payee, string memory title_) internal onlyInitializing { 
         _state = State.INITIALIZED;
         _factory = msg.sender;
-        
+
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(FACTORY_ROLE, msg.sender);
-        
+ 
         if (payee != address(0)) _registerPayee(payee);
         if (funder != address(0)) _registerFunder(funder);
 
         title = title_;
     }
-
 
     function initializeAsFunder(address funder, address payee, string memory _title) external initializer {
         _setupRole(CREATOR_ROLE, funder);
@@ -118,6 +118,10 @@ contract RoleBasedEscrow is Initializable, AccessControl {
     function initializeAsPayee(address funder, address payee, string memory _title) external initializer {
         _setupRole(CREATOR_ROLE, payee);
         _initialize(funder, payee, _title);
+    }
+
+    function _baseURI() internal pure override returns (string memory) {
+        return "https://dev-altverse-archive-p3hvgcmzuq-du.a.run.app/escrows/";
     }
 
     function _initialize(address funder, address payee, string memory _title) internal virtual {
@@ -195,6 +199,13 @@ contract RoleBasedEscrow is Initializable, AccessControl {
 
         erc20Token.safeTransferFrom(msg.sender, address(this), msg.value);
     }
+
+    /**
+     * @dev Upload metadata url for additional infomation regarding the contract.
+     *      IPFS is recommended over centeralized storage since the metadata can be modified with centeralized storage.
+     * @param uri 
+     */
+
 
     /**
      * @dev Withdraw accumulated balance for a payee, forwarding all gas to the
@@ -289,7 +300,7 @@ contract RoleBasedEscrow is Initializable, AccessControl {
     function _finalize() internal {
         _state = State.FINALIZED;
 
-        emit FinalizeContract(msg.sender);
+        emit ContractFinalized(msg.sender);
     }
 
     function _totalAmountOf(ERC20 token, address[] memory parties) private view returns (uint256) {
