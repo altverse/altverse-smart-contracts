@@ -1,43 +1,65 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.7.0 <0.9.0;
+pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 
 import "@openzeppelin/contracts/proxy/Clones.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./ArbitrableEscrow.sol";
 
-contract ArbitrableEscrowFactory {
+contract ArbitrableEscrowFactory is Ownable {
+    uint8 private _maxNumberOfTokens;
+
     address public arbitrableEscrowAddress;
     
     event EscrowCreated(address indexed creator, address indexed funder, address indexed payee, ArbitrableEscrow escrow);
+    event MaxTokenAllowance(uint8 oldAllowance, uint8 newAllowance);
 
     mapping(address => ArbitrableEscrow[]) public deployedEscrows;
 
     constructor(address _arbitrableEscrowAddress) {
+        require(_arbitrableEscrowAddress != address(0), "Escrow contract must have valid address");
         arbitrableEscrowAddress = _arbitrableEscrowAddress;
+        _maxNumberOfTokens = 3;
     }
 
-    function createEscrowAsFunder(address payee) public {
+    function maxNumberOfTokensAllowed() public view returns(uint8) {
+        return _maxNumberOfTokens;
+    }
+
+    function updateMaxTokenAllowance(uint8 allowance) external onlyOwner {
+        require(_maxNumberOfTokens > 0, "Token allowance must be greater than 0");
+
+        emit MaxTokenAllowance(_maxNumberOfTokens, allowance);
+        
+        _maxNumberOfTokens = allowance;
+    }
+
+    function createEscrowAsFunder(address payee, string memory title) external {
         require(arbitrableEscrowAddress != address(0), "Escrow contract does not exist");
 
         ArbitrableEscrow newEscrow = ArbitrableEscrow(Clones.clone(arbitrableEscrowAddress));
-        newEscrow.initialize(msg.sender, payee);
-        deployedEscrows[msg.sender].push(newEscrow);
 
         emit EscrowCreated(msg.sender, msg.sender, payee, newEscrow);
+
+        deployedEscrows[msg.sender].push(newEscrow);
+
+        newEscrow.initializeAsFunder(msg.sender, payee, title);
     }
 
-    // function createEscrowAsPayee(address funder) public {
-    //     require(arbitrableEscrowAddress != address(0), "Escrow contract does not exist");
+    function createEscrowAsPayee(address funder, string memory title) external {
+        require(arbitrableEscrowAddress != address(0), "Escrow contract does not exist");
 
-    //     ArbitrableEscrow newEscrow = ArbitrableEscrow(Clones.clone(arbitrableEscrowAddress));
-    //     newEscrow.initialize(funder, msg.sender);
-    //     deployedEscrows[msg.sender].push(newEscrow);
+        ArbitrableEscrow newEscrow = ArbitrableEscrow(Clones.clone(arbitrableEscrowAddress));
+        
+        emit EscrowCreated(msg.sender, funder, msg.sender, newEscrow);
 
-    //     emit EscrowCreated(msg.sender, funder, msg.sender, newEscrow);
-    // }
+        deployedEscrows[msg.sender].push(newEscrow);
 
-    function escrowsOf(address _owner) external view returns (ArbitrableEscrow[] memory) {
-        return deployedEscrows[_owner];
+        newEscrow.initializeAsPayee(funder, msg.sender, title);
+    }
+
+    function escrowsOf(address _escrowOwner) external view returns (ArbitrableEscrow[] memory) {
+        return deployedEscrows[_escrowOwner];
     }
 }

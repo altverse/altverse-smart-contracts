@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.7.0 <0.9.0;
+pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 
@@ -17,32 +17,24 @@ import "./RoleBasedEscrow.sol";
  * withdrawal by the payee, or refunds to the depositors. 
  */
 contract ArbitrableEscrow is Initializable, RoleBasedEscrow  {
-    using SafeERC20 for IERC20;
+    using SafeERC20 for ERC20;
 
     event Disputed(address indexed caller);
 
     bool public isInDispute;
-    
-    function __ArbitrableEscrow_init() internal onlyInitializing {
-        __ArbitrableEscrow_init_unchained();
-    }
-
-    function __ArbitrableEscrow_init_unchained() internal onlyInitializing {
-    }
 
     /**
      * @dev Initializer. Since the contract will be cloned and constructor is redundant, we need initialize function.
      * @param payee of the deposits.
      */
-    function initialize(address funder, address payee) initializer public override {
-        require(isBaseContract == false, "ArbitrableEscrow: The base contract cannot be initialized");
+    function _initialize(address funder, address payee, string memory title_) internal override {
+        require(!isBaseContract, "ArbitrableEscrow: The base contract cannot be initialized");
         require(payee != funder, "ArbitrableEscrow: payee cannot be itself");
 
-        __ArbitrableEscrow_init();
-        __Escrow_init(funder, payee);
+        __Escrow_init(funder, payee, title_);
     }
 
-    function requestArbitration() external onlyFunder onlyPayee {
+    function requestArbitration() external onlyParticipant {
         require(state() == State.ACTIVATED, "ArbitrableEscrow: can only start arbitration while ACTIVE");
 
         isInDispute = true;
