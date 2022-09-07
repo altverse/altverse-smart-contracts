@@ -71,7 +71,7 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
 
     State internal _state;
 
-    string title;
+    string private _title;
 
     ERC20[] private _fundedTokens;
 
@@ -97,6 +97,10 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
         _setupRole(FACTORY_ROLE, msg.sender);
     }
     
+    function title() public view virtual returns (string memory) {
+        return _title;
+    }
+
     function fundedTokens() public view virtual returns (ERC20[] memory) {
         return _fundedTokens;
     }
@@ -129,28 +133,28 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
         if (payee != address(0)) _registerPayee(payee);
         if (funder != address(0)) _registerFunder(funder);
 
-        title = title_;
+        _title = title_;
     }
 
-    function initializeAsFunder(address funder, address payee, string memory _title) external initializer {
+    function initializeAsFunder(address funder, address payee, string memory title_) external initializer {
         _setupRole(CREATOR_ROLE, funder);
-        _initialize(funder, payee, _title);
+        _initialize(funder, payee, title_);
     }
 
-    function initializeAsPayee(address funder, address payee, string memory _title) external initializer {
+    function initializeAsPayee(address funder, address payee, string memory title_) external initializer {
         _setupRole(CREATOR_ROLE, payee);
-        _initialize(funder, payee, _title);
+        _initialize(funder, payee, title_);
     }
 
     function _baseURI() internal pure override returns (string memory) {
         return "https://archieve.altverse.ai/escrows/description/";
     }
 
-    function _initialize(address funder, address payee, string memory _title) internal virtual {
+    function _initialize(address funder, address payee, string memory title_) internal virtual {
         require(!isBaseContract, "ArbitrableEscrow: The base contract cannot be initialized");
         require(payee != funder, "ArbitrableEscrow: payee cannot be itself");
 
-        __Escrow_init(funder, payee, _title);
+        __Escrow_init(funder, payee, title_);
     }
 
     /**
