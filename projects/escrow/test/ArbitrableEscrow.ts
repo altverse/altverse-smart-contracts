@@ -142,12 +142,12 @@ describe("ArbitrableEscrow", function () {
       const { eventResult: onlyFunderEvent } = await createFunderEscrow(false);
 
       const onlyFunderEscrow = await ethers.getContractAt("ArbitrableEscrow", onlyFunderEvent?.escrow);
-      await expect(onlyFunderEscrow.payees(0)).to.be.reverted;
+      expect((await onlyFunderEscrow.payees()).length).to.equal(0);
 
       const { eventResult: onlyPayeeEvent } = await createPayeeEscrow(false);
 
       const onlyPayeeEscrow = await ethers.getContractAt("ArbitrableEscrow", onlyPayeeEvent?.escrow);
-      await expect(onlyPayeeEscrow.funders(0)).to.be.reverted;
+      expect((await onlyFunderEscrow.funders()).length).to.equal(0);
     });
 
     it("Should set correct roles when cloning escrow (w/ payee preset)", async function () {
@@ -195,7 +195,8 @@ describe("ArbitrableEscrow", function () {
       const baseUri = process.env.METADATA_BASE_URL;
       console.log(baseUri);
 
-      expect(await escrow.escrowURI()).to.equal(`${baseUri}/${escrow.address}`);
+      const expectedUri = `${baseUri}/${escrow.address}`.toLowerCase();
+      expect(await escrow.escrowURI()).to.equal(expectedUri);
     });
   });
 
@@ -262,13 +263,13 @@ describe("ArbitrableEscrow", function () {
 
       const escrow = await ethers.getContractAt("ArbitrableEscrow", funderWithoutPayeeEventResult?.escrow);
 
-      expect(await escrow.funders(0)).to.be.equal(funderAccount.address);
+      expect((await escrow.funders())[0]).to.be.equal(funderAccount.address);
 
       // then another funder registers.
       await fakeUSDToken.transfer(otherAccount1.address, 100);
       await fakeUSDToken.connect(otherAccount1).approve(escrow.address, 100);
       await expect(escrow.connect(otherAccount1).deposit(fakeUSDToken.address, { value: 100 })).not.to.be.reverted;
-      expect(await escrow.funders(1)).to.be.equal(otherAccount1.address);
+      expect((await escrow.funders())[1]).to.be.equal(otherAccount1.address);
     });
 
     it("Should add into payee list when registered and granted as payee", async function () {
@@ -277,7 +278,7 @@ describe("ArbitrableEscrow", function () {
 
       const escrow = await ethers.getContractAt("ArbitrableEscrow", funderWithoutPayeeEventResult?.escrow);
 
-      expect(await escrow.payees(0)).to.be.equal(payeeAccount.address);
+      expect((await escrow.payees())[0]).to.be.equal(payeeAccount.address);
 
       // Payee joined
       await expect(escrow.connect(otherAccount1).registerAsPayee(ethers.utils.formatBytes32String("identifier"))).not.to.be.reverted;
@@ -285,7 +286,7 @@ describe("ArbitrableEscrow", function () {
       // Grant payee
       await escrow.connect(payeeAccount).grantPayeeRole([otherAccount1.address]);
 
-      expect(await escrow.payees(1)).to.be.equal(otherAccount1.address);
+      expect((await escrow.payees())[1]).to.be.equal(otherAccount1.address);
     });
 
     it("Should not be able to register both funder and payee (as funder)", async function () {
@@ -564,7 +565,7 @@ describe("ArbitrableEscrow", function () {
 
       // 1. A funder create a contract
       const contractWithFunder = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, funderAccount);
-      const onlyFunder = await contractWithFunder.funders(0);
+      const onlyFunder = (await contractWithFunder.funders())[0];
       expect(onlyFunder).to.be.equals(funderAccount.address);
 
       // 2. A payee registers himself as a payee of the contract
@@ -572,9 +573,9 @@ describe("ArbitrableEscrow", function () {
       const secretIdentifier = ethers.utils.formatBytes32String("0123456789abcdef");
       const contractWithPayee = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, payeeAccount);
       await contractWithPayee.registerAsPayee(secretIdentifier);
-      const onlyPayeeCandidate = await contractWithPayee.payeeCandidates(0);
+      const onlyPayeeCandidate = (await contractWithPayee.payeeCandidates())[0];
       // since the payee is not yet confirmed payee
-      await expect(contractWithPayee.payees(0)).to.be.reverted;
+      expect((await contractWithPayee.payees()).length).to.be.equal(0);
       expect(onlyPayeeCandidate).to.be.equals(payeeAccount.address);
 
       // 3. The funder first approve an ERC20 token
@@ -590,7 +591,7 @@ describe("ArbitrableEscrow", function () {
 
       // 4. The funder grant payee role to the payee with shared secret identifier
       await contractWithFunder.grantPayeeRole([payeeAccount.address]);
-      const onlyPayee = await contractWithFunder.payees(0);
+      const onlyPayee = (await contractWithFunder.payees())[0];
       expect(onlyPayee).to.be.equals(payeeAccount.address);
 
       // 5. The funder activates the contract
@@ -626,10 +627,10 @@ describe("ArbitrableEscrow", function () {
 
       // 1. A payee create a contract
       const contractWithPayee = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, payeeAccount);
-      const onlyPayee = await contractWithPayee.payees(0);
+      const onlyPayee = (await contractWithPayee.payees())[0];
       expect(onlyPayee).to.be.equals(payeeAccount.address);
       // since the payee is not yet confirmed payee
-      await expect(contractWithPayee.payeeCandidates(0)).to.be.reverted;
+      expect((await contractWithPayee.payeeCandidates()).length).to.equal(0);
 
       // 2. A funder need to approve an ERC20 token
       // The funder has 1000 USDT now

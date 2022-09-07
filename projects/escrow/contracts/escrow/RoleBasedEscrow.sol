@@ -73,15 +73,15 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
 
     string title;
 
-    ERC20[] fundedTokens;
+    ERC20[] private _fundedTokens;
 
-    address[] public payeeCandidates;
-    mapping (address => bytes32) candidatesIdentifier;
-
-    address[] public payees;
-    address[] public funders;
-    mapping (address => mapping (ERC20 => uint256)) public funds;
-
+    address[] private _payeeCandidates;
+    mapping (address => bytes32) private _candidatesIdentifier;
+  
+    address[] private _payees;
+    address[] private _funders;
+    mapping (address => mapping (ERC20 => uint256)) private _funds;
+    
     bool public isBaseContract;
     address private _factory;
 
@@ -97,6 +97,28 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
         _setupRole(FACTORY_ROLE, msg.sender);
     }
     
+    function fundedTokens() public view virtual returns (ERC20[] memory) {
+        return _fundedTokens;
+    }
+    
+    function payeeCandidates() public view virtual returns (address[] memory) {
+        return _payeeCandidates;
+    }
+
+    function candidatesIdentifier(address candidate) public view virtual returns (bytes32) {
+        return _candidatesIdentifier[candidate];
+    }
+    function payees() public view virtual returns (address[] memory) {
+        return _payees;
+    }
+    function funders() public view virtual returns (address[] memory) {
+        return _funders;
+    }
+
+    function funds(address recipient, ERC20 token) public view virtual returns (uint256) {
+        return _funds[recipient][token];
+    }
+
     function __Escrow_init(address funder, address payee, string memory title_) internal onlyInitializing { 
         _state = State.INITIALIZED;
         _factory = msg.sender;
@@ -121,7 +143,7 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
     }
 
     function _baseURI() internal pure override returns (string memory) {
-        return "https://dev-altverse-archive-p3hvgcmzuq-du.a.run.app/escrows/";
+        return "https://archieve.altverse.ai/escrows/description/";
     }
 
     function _initialize(address funder, address payee, string memory _title) internal virtual {
@@ -139,8 +161,8 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
         require(!candidateExist(msg.sender), "RoleBasedEscrow: cannot register twice as payee candidate");
         require(!funderExist(msg.sender), "RoleBasedEscrow: funder cannot be a payee");
 
-        payeeCandidates.push(msg.sender);
-        candidatesIdentifier[msg.sender] = identifier;
+        _payeeCandidates.push(msg.sender);
+        _candidatesIdentifier[msg.sender] = identifier;
 
         emit PayeeCandidateRegistered(msg.sender);
     }
@@ -150,7 +172,7 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
         require(!payeeExist(payee), "RoleBasedEscrow: cannot register twice as payee");
         require(!funderExist(payee), "RoleBasedEscrow: funder cannot be a payee");
         
-        payees.push(payee);
+        _payees.push(payee);
         _setupRole(PAYEE_ROLE, payee);
 
         emit PayeeRegistered(payee);
@@ -158,12 +180,12 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
     
     function grantPayeeRole(address[] memory payeesToGrant) external onlyCreator {
         require(payeesToGrant.length > 0, "RoleBasedEscrow: array must be larger than 0");
-        require(payeeCandidates.length > 0, "RoleBasedEscrow: there is no candidates to grant");
+        require(_payeeCandidates.length > 0, "RoleBasedEscrow: there is no candidates to grant");
 
         for (uint i = 0; i < payeesToGrant.length; i++) {
             address payeeToGrant = payeesToGrant[i];
             
-            if (_existingAddress(payeeCandidates, payeeToGrant)) {
+            if (_existingAddress(_payeeCandidates, payeeToGrant)) {
                 _registerPayee(payeeToGrant);
             }
         }
@@ -174,7 +196,7 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
         require(!funderExist(funder), "RoleBasedEscrow: cannot register twice as funder");
         require(!payeeExist(funder), "RoleBasedEscrow: payee cannot be a funder");
 
-        funders.push(funder);
+        _funders.push(funder);
         _setupRole(FUNDER_ROLE, funder);
 
         emit FunderRegistered(funder);
@@ -193,7 +215,7 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
         _addTokenList(erc20Token);
         _addFunder(msg.sender);
 
-        funds[msg.sender][erc20Token] += msg.value;
+        _funds[msg.sender][erc20Token] += msg.value;
 
         emit Deposited(msg.sender, erc20Token, msg.value);
 
@@ -225,14 +247,14 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
     }
 
     function _withdraw(address payee) private {
-        ERC20[] memory tokenWithdrawn = new ERC20[](fundedTokens.length);
-        uint256[] memory amountWithdrawn = new uint256[](fundedTokens.length);
+        ERC20[] memory tokenWithdrawn = new ERC20[](_fundedTokens.length);
+        uint256[] memory amountWithdrawn = new uint256[](_fundedTokens.length);
 
-        for (uint i = 0; i < fundedTokens.length; i++) {
-            ERC20 token = fundedTokens[i];
-            uint256 amount = funds[payee][token];
+        for (uint i = 0; i < _fundedTokens.length; i++) {
+            ERC20 token = _fundedTokens[i];
+            uint256 amount = _funds[payee][token];
             if (amount > 0) {
-                funds[payee][token] = 0;
+                _funds[payee][token] = 0;
                 token.safeTransfer(payee, amount);
 
                 tokenWithdrawn[i] = token;
@@ -249,7 +271,7 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
 
     function activateContract() external virtual onlyCreator {
         require(state() == State.INITIALIZED, "RoleBasedEscrow: Escrow can be activated only after initialized");
-        require(payees.length > 0, "RoleBasedEscrow: There must be at least one payee");
+        require(_payees.length > 0, "RoleBasedEscrow: There must be at least one payee");
 
         _state = State.ACTIVATED;
 
@@ -269,17 +291,17 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
         require(state() == State.ACTIVATED, "RoleBasedEscrow: Escrow can be finalized (settled) on ACTIVATED state only");
         
         // For each token funded
-        for (uint tokenIndex = 0; tokenIndex < fundedTokens.length; tokenIndex++) {
-            ERC20 token = fundedTokens[tokenIndex];
-            uint256 totalAmountPerToken = _totalAmountOf(token, funders);
+        for (uint tokenIndex = 0; tokenIndex < _fundedTokens.length; tokenIndex++) {
+            ERC20 token = _fundedTokens[tokenIndex];
+            uint256 totalAmountPerToken = _totalAmountOf(token, _funders);
             // Then distribute to payees equally
-            if (totalAmountPerToken > 0 && payees.length > 0) {
-                uint256 numberOfPayees = payees.length;
+            if (totalAmountPerToken > 0 && _payees.length > 0) {
+                uint256 numberOfPayees = _payees.length;
                 uint256 amountEach = totalAmountPerToken / numberOfPayees;
 
-                for (uint payeeIndex = 0; payeeIndex < payees.length; payeeIndex++) {
-                    address payee = payees[payeeIndex];
-                    funds[payee][token] = amountEach;             
+                for (uint payeeIndex = 0; payeeIndex < _payees.length; payeeIndex++) {
+                    address payee = _payees[payeeIndex];
+                    _funds[payee][token] = amountEach;             
                     totalAmountPerToken -= amountEach;
 
                     // Withdraw
@@ -307,7 +329,7 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
         uint256 totalAmountPerToken = 0;
         for (uint index = 0; index < parties.length; index++) {
             address party = parties[index];
-            totalAmountPerToken += funds[party][token];
+            totalAmountPerToken += _funds[party][token];
         }
 
         return totalAmountPerToken;
@@ -321,15 +343,15 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
     }
 
     function payeeExist(address payee) public view returns (bool) {
-        return _existingAddress(payees, payee);
+        return _existingAddress(_payees, payee);
     }
 
     function funderExist(address funder) public view returns (bool) {
-        return _existingAddress(funders, funder);
+        return _existingAddress(_funders, funder);
     }
 
     function candidateExist(address candidate) public view returns (bool) {
-        return _existingAddress(payeeCandidates, candidate);
+        return _existingAddress(_payeeCandidates, candidate);
     }
 
     function _existingAddress(address[] memory array, address target) private pure returns (bool) {
@@ -343,21 +365,21 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
     }
 
     function _addTokenList(ERC20 token) private {
-        for (uint i = 0; i < fundedTokens.length; i++) {
-            if (fundedTokens[i] == token) {
-                fundedTokens[i] = token;
+        for (uint i = 0; i < _fundedTokens.length; i++) {
+            if (_fundedTokens[i] == token) {
+                _fundedTokens[i] = token;
                 return;
             }
         }
 
-        require(fundedTokens.length < ArbitrableEscrowFactory( _factory).maxNumberOfTokensAllowed());
+        require(_fundedTokens.length < ArbitrableEscrowFactory( _factory).maxNumberOfTokensAllowed());
 
-        fundedTokens.push(token);
+        _fundedTokens.push(token);
     }
 
     function _addFunder(address funder) private {
-        for (uint i = 0; i < funders.length; i++) {
-            if (funders[i] == funder) {
+        for (uint i = 0; i < _funders.length; i++) {
+            if (_funders[i] == funder) {
                 // Already exist. Should not add on the list.
                 return;
             }
