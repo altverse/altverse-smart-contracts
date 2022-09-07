@@ -97,29 +97,29 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
         _setupRole(FACTORY_ROLE, msg.sender);
     }
     
-    function title() public view virtual returns (string memory) {
+    function title() external view virtual returns (string memory) {
         return _title;
     }
 
-    function fundedTokens() public view virtual returns (ERC20[] memory) {
+    function fundedTokens() external view virtual returns (ERC20[] memory) {
         return _fundedTokens;
     }
     
-    function payeeCandidates() public view virtual returns (address[] memory) {
+    function payeeCandidates() external view virtual returns (address[] memory) {
         return _payeeCandidates;
     }
 
-    function candidatesIdentifier(address candidate) public view virtual returns (bytes32) {
+    function candidatesIdentifier(address candidate) external view virtual returns (bytes32) {
         return _candidatesIdentifier[candidate];
     }
-    function payees() public view virtual returns (address[] memory) {
+    function payees() external view virtual returns (address[] memory) {
         return _payees;
     }
-    function funders() public view virtual returns (address[] memory) {
+    function funders() external view virtual returns (address[] memory) {
         return _funders;
     }
 
-    function funds(address recipient, ERC20 token) public view virtual returns (uint256) {
+    function funds(address recipient, ERC20 token) external view virtual returns (uint256) {
         return _funds[recipient][token];
     }
 
