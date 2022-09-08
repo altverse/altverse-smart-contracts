@@ -28,7 +28,7 @@ contract ArbitrableEscrowFactory is Ownable {
     }
 
     function updateMaxTokenAllowance(uint8 allowance) external onlyOwner {
-        require(_maxNumberOfTokens > 0, "Token allowance must be greater than 0");
+        require(allowance > 0, "Token allowance must be greater than 0");
 
         emit MaxTokenAllowance(_maxNumberOfTokens, allowance);
         
