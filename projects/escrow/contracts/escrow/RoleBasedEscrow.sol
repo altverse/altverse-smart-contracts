@@ -305,7 +305,7 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
 
                 for (uint payeeIndex = 0; payeeIndex < _payees.length; payeeIndex++) {
                     address payee = _payees[payeeIndex];
-                    _funds[payee][token] = amountEach;             
+                    _funds[payee][token] -= amountEach;             
                     totalAmountPerToken -= amountEach;
 
                     // Withdraw
