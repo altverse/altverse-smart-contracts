@@ -22,6 +22,12 @@ const config: HardhatUserConfig = {
     kovan: {
       url: `https://kovan.infura.io/v3/${process.env.INFURA_API_KEY}`,
     },
+    bsc_testnet: {
+      url: `https://data-seed-prebsc-1-s1.binance.org:8545`,
+    },
+    bsc_mainnet: {
+      url: `https://bsc-dataseed.binance.org/`,
+    },
   },
   etherscan: {
     // API key for Etherscan
