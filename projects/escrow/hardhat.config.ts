@@ -24,6 +24,7 @@ const config: HardhatUserConfig = {
     },
     bsc_testnet: {
       url: `https://data-seed-prebsc-1-s1.binance.org:8545`,
+      accounts: [`0x${process.env.ALTVERSE_TEST_WALLET_PRIVATE_KEY}`],
     },
     bsc_mainnet: {
       url: `https://bsc-dataseed.binance.org/`,
