@@ -28,7 +28,7 @@ contract ArbitrableEscrow is Initializable, RoleBasedEscrow  {
      * @param payee of the deposits.
      */
     function _initialize(address funder, address payee, string memory title_) internal override {
-        require(!isBaseContract, "ArbitrableEscrow: The base contract cannot be initialized");
+        require(!_isBaseContract, "ArbitrableEscrow: The base contract cannot be initialized");
         require(payee != funder, "ArbitrableEscrow: payee cannot be itself");
 
         __Escrow_init(funder, payee, title_);

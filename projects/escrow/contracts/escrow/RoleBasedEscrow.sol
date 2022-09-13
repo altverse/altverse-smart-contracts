@@ -82,7 +82,7 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
     address[] private _funders;
     mapping (address => mapping (ERC20 => uint256)) private _funds;
     
-    bool public isBaseContract;
+    bool internal _isBaseContract;
     address private _factory;
 
     /**
@@ -91,7 +91,7 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
      */
      constructor() {
         // The base contract must not be initialized, since we are using clones.
-        isBaseContract = true;
+        _isBaseContract = true;
 
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(FACTORY_ROLE, msg.sender);
@@ -151,7 +151,7 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
     }
 
     function _initialize(address funder, address payee, string memory title_) internal virtual {
-        require(!isBaseContract, "ArbitrableEscrow: The base contract cannot be initialized");
+        require(!_isBaseContract, "ArbitrableEscrow: The base contract cannot be initialized");
         require(payee != funder, "ArbitrableEscrow: payee cannot be itself");
 
         __Escrow_init(funder, payee, title_);
@@ -278,8 +278,23 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
         require(_payees.length > 0, "RoleBasedEscrow: There must be at least one payee");
 
         _state = State.ACTIVATED;
-
+        
         emit ContractActivated(msg.sender);
+
+        _recordRewards();
+    }
+
+    function _recordRewards() internal {
+        // For each token funded
+        for (uint tokenIndex = 0; tokenIndex < _fundedTokens.length; tokenIndex++) {
+            ERC20 token = _fundedTokens[tokenIndex];
+
+            // record as zero address for tracking purpose of total funds.
+            for (uint index = 0; index < _funders.length; index++) {
+                address funder = _funders[index];
+                _funds[address(0)][token] += _funds[funder][token];   
+            }
+        }
     }
 
     /**
