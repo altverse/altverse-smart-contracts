@@ -297,7 +297,7 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
         // For each token funded
         for (uint tokenIndex = 0; tokenIndex < _fundedTokens.length; tokenIndex++) {
             ERC20 token = _fundedTokens[tokenIndex];
-            uint256 totalAmountPerToken = _totalAmountOf(token, _funders);
+            uint256 totalAmountPerToken = _takeTokensFrom(token, _funders);
             // Then distribute to payees equally
             if (totalAmountPerToken > 0 && _payees.length > 0) {
                 uint256 numberOfPayees = _payees.length;
@@ -317,6 +317,7 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
                 // TODO: Put leftover amount to Treasury
                 // console.log("LeftOver: token - ", address(token));
                 // console.log("LeftOver: totalAmountPerToken - ", totalAmountPerToken);
+                token.safeTransfer(address(0x44988Fd0C8d026AfE4b1594e55Dfa141a804BCC0), totalAmountPerToken);
             }
         }
 
@@ -329,11 +330,12 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
         emit ContractFinalized(msg.sender);
     }
 
-    function _totalAmountOf(ERC20 token, address[] memory parties) private view returns (uint256) {
+    function _takeTokensFrom(ERC20 token, address[] memory parties) private returns (uint256) {
         uint256 totalAmountPerToken = 0;
         for (uint index = 0; index < parties.length; index++) {
             address party = parties[index];
             totalAmountPerToken += _funds[party][token];
+            _funds[party][token] = 0;
         }
 
         return totalAmountPerToken;
