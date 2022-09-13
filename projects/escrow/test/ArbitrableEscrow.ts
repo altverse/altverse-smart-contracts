@@ -520,6 +520,38 @@ describe("ArbitrableEscrow", function () {
     it("Should be able to withdraw when the settlement has completed with autoWithdraw = false.", async function () {});
 
     it("Should set to FINALIZED state after the settlement has completed", async function () {});
+
+    it("Should set _funds for each parties properly after the settlement has been done", async function () {
+      const { eventResult, fakeUSDToken, funderAccount, payeeAccount } = await createFunderEscrow(false);
+
+      const escrow = await ethers.getContractAt("ArbitrableEscrow", eventResult?.escrow);
+
+      // Deposit
+      await fakeUSDToken.transfer(funderAccount.address, 1000);
+      await fakeUSDToken.connect(funderAccount).approve(escrow.address, 1000);
+      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, { value: 100 })).not.to.be.reverted;
+
+      // Payee join & grant
+      await expect(escrow.connect(payeeAccount).registerAsPayee(ethers.utils.formatBytes32String("identifier"))).not.to.be.reverted;
+      await escrow.connect(funderAccount).grantPayeeRole([payeeAccount.address]);
+
+      // Contract accepted and Settle
+      await expect(escrow.connect(funderAccount).activateContract()).not.to.be.reverted;
+      // NOTE that autowithdrawl=false
+      await expect(escrow.connect(funderAccount).settle(false)).not.to.be.reverted;
+
+      // funds for payee should be equal to 100
+      const fundsForPayee = await escrow.funds(payeeAccount.address, fakeUSDToken.address);
+      expect(fundsForPayee).to.equal(100);
+
+      // funds for funder should be equal to zero
+      const fundsForFunder = await escrow.funds(funderAccount.address, fakeUSDToken.address);
+      expect(fundsForFunder).to.equal(0);
+
+      // funds record saved at zero-index should be equal to 100
+      const fundsRecord = await escrow.funds(emptyAddress, fakeUSDToken.address);
+      expect(fundsRecord).to.equal(100);
+    });
   });
 
   describe("Events", function () {
