@@ -210,20 +210,20 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
      * @dev Deposit ERC20 compatible funds after the contract has initiated.
      * @param tokenAddress token to be deposited
      */
-    function deposit(address tokenAddress) payable external {
+    function deposit(address tokenAddress, uint256 amount) external {
         require(state() >= State.INITIALIZED && state() <= State.ACTIVATED, "RoleBasedEscrow: can only deposit after INITIATED");
-        require(msg.value > 0, "RoleBasedEscrow: Token amount must be greater than zero");
+        require(amount > 0, "RoleBasedEscrow: Token amount must be greater than zero");
 
         ERC20 erc20Token = ERC20(tokenAddress);
 
         _addTokenList(erc20Token);
         _addFunder(msg.sender);
 
-        _funds[msg.sender][erc20Token] += msg.value;
+        _funds[msg.sender][erc20Token] += amount;
 
-        emit Deposited(msg.sender, erc20Token, msg.value);
+        emit Deposited(msg.sender, erc20Token, amount);
 
-        erc20Token.safeTransferFrom(msg.sender, address(this), msg.value);
+        erc20Token.safeTransferFrom(msg.sender, address(this), amount);
     }
 
     /**

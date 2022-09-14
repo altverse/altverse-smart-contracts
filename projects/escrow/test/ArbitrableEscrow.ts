@@ -210,7 +210,7 @@ describe("ArbitrableEscrow", function () {
       // then another funder registers by deposit.
       await fakeUSDToken.transfer(otherAccount1.address, 100);
       await fakeUSDToken.connect(otherAccount1).approve(escrow.address, 100);
-      await expect(escrow.connect(otherAccount1).deposit(fakeUSDToken.address, { value: 100 })).not.to.be.reverted;
+      await expect(escrow.connect(otherAccount1).deposit(fakeUSDToken.address, 100)).not.to.be.reverted;
       const funderRole = await escrow.FUNDER_ROLE();
       expect(await escrow.hasRole(funderRole, otherAccount1.address)).to.be.true;
 
@@ -238,7 +238,7 @@ describe("ArbitrableEscrow", function () {
       // then funder registers by deposit.
       await fakeUSDToken.transfer(otherAccount1.address, 100);
       await fakeUSDToken.connect(otherAccount1).approve(escrow.address, 100);
-      await expect(escrow.connect(otherAccount1).deposit(fakeUSDToken.address, { value: 100 })).not.to.be.reverted;
+      await expect(escrow.connect(otherAccount1).deposit(fakeUSDToken.address, 100)).not.to.be.reverted;
       const funderRole = await escrow.FUNDER_ROLE();
       expect(await escrow.hasRole(funderRole, otherAccount1.address)).to.be.true;
 
@@ -268,7 +268,7 @@ describe("ArbitrableEscrow", function () {
       // then another funder registers.
       await fakeUSDToken.transfer(otherAccount1.address, 100);
       await fakeUSDToken.connect(otherAccount1).approve(escrow.address, 100);
-      await expect(escrow.connect(otherAccount1).deposit(fakeUSDToken.address, { value: 100 })).not.to.be.reverted;
+      await expect(escrow.connect(otherAccount1).deposit(fakeUSDToken.address, 100)).not.to.be.reverted;
       expect((await escrow.funders())[1]).to.be.equal(otherAccount1.address);
     });
 
@@ -308,7 +308,7 @@ describe("ArbitrableEscrow", function () {
       // then trying to be a funder.
       await fakeUSDToken.transfer(payeeAccount.address, 100);
       await fakeUSDToken.connect(payeeAccount).approve(escrow.address, 100);
-      await expect(escrow.connect(payeeAccount).deposit(fakeUSDToken.address, { value: 100 })).to.be.revertedWith("RoleBasedEscrow: payee cannot be a funder");
+      await expect(escrow.connect(payeeAccount).deposit(fakeUSDToken.address, 100)).to.be.revertedWith("RoleBasedEscrow: payee cannot be a funder");
     });
 
     it("Should not be able to register twice for the payee role", async function () {
@@ -346,7 +346,7 @@ describe("ArbitrableEscrow", function () {
       await fakeUSDToken.transfer(funderAccount.address, 1000);
 
       await fakeUSDToken.connect(funderAccount).approve(escrow.address, 100);
-      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, { value: 100 })).not.to.be.reverted;
+      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, 100)).not.to.be.reverted;
 
       expect(await fakeUSDToken.balanceOf(funderAccount.address)).to.equal(900);
     });
@@ -358,13 +358,13 @@ describe("ArbitrableEscrow", function () {
       await fakeUSDToken.transfer(funderAccount.address, 1000);
 
       await fakeUSDToken.connect(funderAccount).approve(escrow.address, 300);
-      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, { value: 100 })).not.to.be.reverted;
-      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, { value: 200 })).not.to.be.reverted;
+      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, 100)).not.to.be.reverted;
+      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, 200)).not.to.be.reverted;
 
       await fakeUSDToken2.transfer(otherAccount1.address, 1000);
 
       await fakeUSDToken2.connect(otherAccount1).approve(escrow.address, 300);
-      await expect(escrow.connect(otherAccount1).deposit(fakeUSDToken2.address, { value: 300 })).not.to.be.reverted;
+      await expect(escrow.connect(otherAccount1).deposit(fakeUSDToken2.address, 300)).not.to.be.reverted;
 
       expect(await fakeUSDToken.balanceOf(escrow.address)).to.equal(300);
       expect(await escrow.funds(funderAccount.address, fakeUSDToken.address)).to.equal(300);
@@ -380,14 +380,14 @@ describe("ArbitrableEscrow", function () {
       await fakeUSDToken.transfer(funderAccount.address, 1000);
 
       await fakeUSDToken.connect(funderAccount).approve(escrow.address, 100);
-      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, { value: 100 })).not.to.be.reverted;
+      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, 100)).not.to.be.reverted;
       expect(await fakeUSDToken.balanceOf(funderAccount.address)).to.equal("900");
       expect(await escrow.funds(funderAccount.address, fakeUSDToken.address)).to.equal(100);
 
       await fakeUSDToken2.transfer(funderAccount.address, 1000);
 
       await fakeUSDToken2.connect(funderAccount).approve(escrow.address, 200);
-      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken2.address, { value: 200 })).not.to.be.reverted;
+      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken2.address, 200)).not.to.be.reverted;
       expect(await fakeUSDToken2.balanceOf(funderAccount.address)).to.equal("800");
       expect(await escrow.funds(funderAccount.address, fakeUSDToken2.address)).to.equal(200);
     });
@@ -400,10 +400,10 @@ describe("ArbitrableEscrow", function () {
 
       await fakeUSDToken.connect(funderAccount).approve(escrow.address, 300);
 
-      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, { value: 100 })).not.to.be.reverted;
+      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, 100)).not.to.be.reverted;
       expect(await fakeUSDToken.balanceOf(funderAccount.address)).to.equal(900);
 
-      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, { value: 200 })).not.to.be.reverted;
+      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, 200)).not.to.be.reverted;
       expect(await fakeUSDToken.balanceOf(funderAccount.address)).to.equal(700);
 
       expect(await escrow.funds(funderAccount.address, fakeUSDToken.address)).to.equal(300);
@@ -416,7 +416,7 @@ describe("ArbitrableEscrow", function () {
       await fakeUSDToken.transfer(funderAccount.address, 1000);
 
       await fakeUSDToken.connect(funderAccount).approve(escrow.address, 100);
-      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, { value: 100 })).not.to.be.reverted;
+      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, 100)).not.to.be.reverted;
 
       expect(await fakeUSDToken.balanceOf(funderAccount.address)).to.equal(900);
     });
@@ -428,7 +428,7 @@ describe("ArbitrableEscrow", function () {
       await fakeUSDToken.transfer(funderAccount.address, 1000);
 
       await fakeUSDToken.connect(funderAccount).approve(escrow.address, 1100);
-      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, { value: 1100 })).to.be.revertedWith("ERC20: transfer amount exceeds balance");
+      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, 1100)).to.be.revertedWith("ERC20: transfer amount exceeds balance");
     });
   });
 
@@ -440,7 +440,7 @@ describe("ArbitrableEscrow", function () {
       await fakeUSDToken.transfer(funderAccount.address, 1000);
 
       await fakeUSDToken.connect(funderAccount).approve(escrow.address, 1000);
-      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, { value: 100 })).not.to.be.reverted;
+      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, 100)).not.to.be.reverted;
 
       // Contract accepted
       await expect(escrow.connect(funderAccount).activateContract()).to.be.revertedWith("RoleBasedEscrow: There must be at least one payee");
@@ -455,13 +455,13 @@ describe("ArbitrableEscrow", function () {
       await fakeUSDToken.transfer(funderAccount.address, 1000);
 
       await fakeUSDToken.connect(funderAccount).approve(escrow.address, 1000);
-      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, { value: 100 })).not.to.be.reverted;
-      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, { value: 200 })).not.to.be.reverted;
+      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, 100)).not.to.be.reverted;
+      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, 200)).not.to.be.reverted;
 
       await fakeUSDToken2.transfer(funderAccount.address, 1000);
 
       await fakeUSDToken2.connect(funderAccount).approve(escrow.address, 1000);
-      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken2.address, { value: 300 })).not.to.be.reverted;
+      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken2.address, 300)).not.to.be.reverted;
 
       // Currently INITIALIZED state.
       await expect(escrow.connect(funderAccount).withdraw()).not.to.be.reverted;
@@ -476,7 +476,7 @@ describe("ArbitrableEscrow", function () {
       await fakeUSDToken.transfer(funderAccount.address, 1000);
 
       await fakeUSDToken.connect(funderAccount).approve(escrow.address, 1000);
-      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, { value: 100 })).not.to.be.reverted;
+      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, 100)).not.to.be.reverted;
 
       // Payee joined
       await expect(escrow.connect(payeeAccount).registerAsPayee(ethers.utils.formatBytes32String("identifier"))).not.to.be.reverted;
@@ -500,7 +500,7 @@ describe("ArbitrableEscrow", function () {
       // Deposit
       await fakeUSDToken.transfer(funderAccount.address, 1000);
       await fakeUSDToken.connect(funderAccount).approve(escrow.address, 1000);
-      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, { value: 100 })).not.to.be.reverted;
+      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, 100)).not.to.be.reverted;
 
       // Payee join & grant
       await expect(escrow.connect(payeeAccount).registerAsPayee(ethers.utils.formatBytes32String("identifier"))).not.to.be.reverted;
@@ -538,9 +538,7 @@ describe("ArbitrableEscrow", function () {
 
       await fakeUSDToken.transfer(funderAccount.address, 300);
       await fakeUSDToken.connect(funderAccount).approve(escrow.address, 300);
-      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, { value: 300 }))
-        .to.emit(escrow, "FunderRegistered")
-        .withArgs(funderAccount.address);
+      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, 300)).to.emit(escrow, "FunderRegistered").withArgs(funderAccount.address);
     });
 
     it("Should emit PayeeRegistered event when payee is granted", async function () {
@@ -585,7 +583,7 @@ describe("ArbitrableEscrow", function () {
       await fakeUSDToken.connect(funderAccount).approve(escrowAddress, 300);
 
       const toDeposit = 300;
-      await contractWithFunder.deposit(fakeUSDToken.address, { value: toDeposit });
+      await contractWithFunder.deposit(fakeUSDToken.address, toDeposit);
       const fund = await contractWithFunder.funds(funderAccount.address, fakeUSDToken.address);
       expect(fund).to.be.equals(toDeposit);
 
@@ -641,7 +639,7 @@ describe("ArbitrableEscrow", function () {
       // 3. The funder deposit the token
       const toDeposit = 300;
       const contractWithFunder = await ethers.getContractAt("ArbitrableEscrow", escrowAddress, funderAccount);
-      await contractWithFunder.deposit(fakeUSDToken.address, { value: toDeposit });
+      await contractWithFunder.deposit(fakeUSDToken.address, toDeposit);
       const fund = await contractWithFunder.funds(funderAccount.address, fakeUSDToken.address);
       expect(fund).to.be.equals(toDeposit);
 
@@ -933,7 +931,7 @@ describe("ArbitrableEscrow", function () {
         await fakeUSDToken.connect(funderAccount).approve(escrowAddress, 1000);
 
         const toDeposit = 300;
-        await contractWithFunder.deposit(fakeUSDToken.address, { value: toDeposit });
+        await contractWithFunder.deposit(fakeUSDToken.address, toDeposit);
         return contractWithFunder;
       };
 
@@ -965,7 +963,7 @@ describe("ArbitrableEscrow", function () {
 
       it("deposit: additional `deposit` should deposit more", async function () {
         const contractWithFunder = await goToDepositStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
-        await expect(contractWithFunder.deposit(fakeUSDToken.address, { value: 300 })).not.to.be.reverted;
+        await expect(contractWithFunder.deposit(fakeUSDToken.address, 300)).not.to.be.reverted;
         expect(await contractWithFunder.funds(funderAccount.address, fakeUSDToken.address)).to.equals(600); // 300 + 300
       });
 
@@ -1060,7 +1058,7 @@ describe("ArbitrableEscrow", function () {
         await fakeUSDToken.connect(funderAccount).approve(escrowAddress, 1000);
 
         const toDeposit = 300;
-        await contractWithFunder.deposit(fakeUSDToken.address, { value: toDeposit });
+        await contractWithFunder.deposit(fakeUSDToken.address, toDeposit);
         await contractWithFunder.grantPayeeRole([payeeAccount.address]);
         return contractWithFunder;
       };
@@ -1093,7 +1091,7 @@ describe("ArbitrableEscrow", function () {
 
       it("deposit: additional `deposit` should deposit more", async function () {
         const contractWithFunder = await goToGrantPayeeRoleStep({ escrowAddress, funderAccount, payeeAccount, fakeUSDToken });
-        await expect(contractWithFunder.deposit(fakeUSDToken.address, { value: 300 })).not.to.be.reverted;
+        await expect(contractWithFunder.deposit(fakeUSDToken.address, 300)).not.to.be.reverted;
         expect(await contractWithFunder.funds(funderAccount.address, fakeUSDToken.address)).to.equals(600); // 300 + 300
       });
 
