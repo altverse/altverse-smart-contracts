@@ -221,7 +221,7 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
 
         _funds[msg.sender][erc20Token] += amount;
 
-        _recordRewards();
+        _recordFunds();
 
         emit Deposited(msg.sender, erc20Token, amount);
 
@@ -243,7 +243,11 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
         require(withdrawalAllowed(msg.sender), "RoleBasedEscrow: Cannot withdraw on current state");
         
         _withdraw(msg.sender);
-        _recordRewards();
+
+        // Should not record for the case when payee withdraws manually on finalized state.
+        if (state() < State.FINALIZED) {
+            _recordFunds();
+        }
     }
 
     function _withdraw(address payee) private {
@@ -278,7 +282,7 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
         emit ContractActivated(msg.sender);
     }
 
-    function _recordRewards() internal {
+    function _recordFunds() internal {
         // For each token funded
         for (uint tokenIndex = 0; tokenIndex < _fundedTokens.length; tokenIndex++) {
             ERC20 token = _fundedTokens[tokenIndex];
