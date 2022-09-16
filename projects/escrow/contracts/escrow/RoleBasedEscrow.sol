@@ -243,7 +243,11 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
         require(withdrawalAllowed(msg.sender), "RoleBasedEscrow: Cannot withdraw on current state");
         
         _withdraw(msg.sender);
-        _recordRewards();
+
+        // Should not record for the case when payee withdraws manually on finalized state.
+        if (state() < State.FINALIZED) {
+            _recordRewards();
+        }
     }
 
     function _withdraw(address payee) private {
