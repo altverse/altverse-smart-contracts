@@ -519,7 +519,7 @@ describe("ArbitrableEscrow", function () {
       // Deposit
       await fakeUSDToken.transfer(funderAccount.address, 1000);
       await fakeUSDToken.connect(funderAccount).approve(escrow.address, 1000);
-      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, { value: 100 })).not.to.be.reverted;
+      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, 100)).not.to.be.reverted;
 
       // Payee join & grant
       await expect(escrow.connect(payeeAccount).registerAsPayee(ethers.utils.formatBytes32String("identifier"))).not.to.be.reverted;
@@ -537,7 +537,7 @@ describe("ArbitrableEscrow", function () {
       // Deposit
       await fakeUSDToken.transfer(funderAccount.address, 1000);
       await fakeUSDToken.connect(funderAccount).approve(escrow.address, 1000);
-      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, { value: 100 })).not.to.be.reverted;
+      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, 100)).not.to.be.reverted;
 
       // Payee join & grant
       await expect(escrow.connect(payeeAccount).registerAsPayee(ethers.utils.formatBytes32String("identifier"))).not.to.be.reverted;
@@ -558,7 +558,7 @@ describe("ArbitrableEscrow", function () {
       // Deposit
       await fakeUSDToken.transfer(funderAccount.address, 1000);
       await fakeUSDToken.connect(funderAccount).approve(escrow.address, 1000);
-      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, { value: 100 })).not.to.be.reverted;
+      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, 100)).not.to.be.reverted;
 
       // Payee join & grant
       await expect(escrow.connect(payeeAccount).registerAsPayee(ethers.utils.formatBytes32String("identifier"))).not.to.be.reverted;
@@ -579,7 +579,7 @@ describe("ArbitrableEscrow", function () {
       // Deposit
       await fakeUSDToken.transfer(funderAccount.address, 1000);
       await fakeUSDToken.connect(funderAccount).approve(escrow.address, 1000);
-      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, { value: 100 })).not.to.be.reverted;
+      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, 100)).not.to.be.reverted;
 
       // Payee join & grant
       await expect(escrow.connect(payeeAccount).registerAsPayee(ethers.utils.formatBytes32String("identifier"))).not.to.be.reverted;
@@ -601,7 +601,7 @@ describe("ArbitrableEscrow", function () {
       // Deposit
       await fakeUSDToken.transfer(funderAccount.address, 1000);
       await fakeUSDToken.connect(funderAccount).approve(escrow.address, 1000);
-      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, { value: 100 })).not.to.be.reverted;
+      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, 100)).not.to.be.reverted;
 
       // Payee join & grant
       await expect(escrow.connect(payeeAccount).registerAsPayee(ethers.utils.formatBytes32String("identifier"))).not.to.be.reverted;
@@ -622,7 +622,7 @@ describe("ArbitrableEscrow", function () {
       // Deposit
       await fakeUSDToken.transfer(funderAccount.address, 1000);
       await fakeUSDToken.connect(funderAccount).approve(escrow.address, 1000);
-      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, { value: 100 })).not.to.be.reverted;
+      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, 100)).not.to.be.reverted;
 
       // Payee join & grant
       await expect(escrow.connect(payeeAccount).registerAsPayee(ethers.utils.formatBytes32String("identifier"))).not.to.be.reverted;
@@ -637,7 +637,7 @@ describe("ArbitrableEscrow", function () {
       const fundsForPayee = await escrow.funds(payeeAccount.address, fakeUSDToken.address);
       expect(fundsForPayee).to.equal(100);
 
-      // funds for funder should be equal to zero. 
+      // funds for funder should be equal to zero.
       const fundsForFunder = await escrow.funds(funderAccount.address, fakeUSDToken.address);
       expect(fundsForFunder).to.equal(0);
 

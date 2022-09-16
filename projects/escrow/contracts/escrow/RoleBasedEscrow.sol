@@ -221,17 +221,12 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
 
         _funds[msg.sender][erc20Token] += amount;
 
+        _recordRewards();
+
         emit Deposited(msg.sender, erc20Token, amount);
 
         erc20Token.safeTransferFrom(msg.sender, address(this), amount);
     }
-
-    /**
-     * @dev Upload metadata url for additional infomation regarding the contract.
-     *      IPFS is recommended over centeralized storage since the metadata can be modified with centeralized storage.
-     * @param uri 
-     */
-
 
     /**
      * @dev Withdraw accumulated balance for a payee, forwarding all gas to the
@@ -248,6 +243,7 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
         require(withdrawalAllowed(msg.sender), "RoleBasedEscrow: Cannot withdraw on current state");
         
         _withdraw(msg.sender);
+        _recordRewards();
     }
 
     function _withdraw(address payee) private {
@@ -280,8 +276,6 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
         _state = State.ACTIVATED;
         
         emit ContractActivated(msg.sender);
-
-        _recordRewards();
     }
 
     function _recordRewards() internal {
