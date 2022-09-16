@@ -28,6 +28,7 @@ const config: HardhatUserConfig = {
     },
     bsc_mainnet: {
       url: `https://bsc-dataseed.binance.org/`,
+      accounts: [`0x${process.env.ALTVERSE_WALLET_PRIVATE_KEY}`],
     },
   },
   etherscan: {
