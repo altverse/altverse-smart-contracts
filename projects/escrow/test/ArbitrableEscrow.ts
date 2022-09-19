@@ -441,7 +441,7 @@ describe("ArbitrableEscrow", function () {
     });
 
     it("Should update funds when deposited", async function () {
-      const { eventResult, fakeUSDToken, funderAccount, payeeAccount } = await createFunderEscrow(false);
+      const { eventResult, fakeUSDToken, funderAccount, payeeAccount, otherAccount1 } = await createFunderEscrow(false);
       const escrow = await ethers.getContractAt("ArbitrableEscrow", eventResult?.escrow);
 
       await fakeUSDToken.transfer(funderAccount.address, 200);
@@ -450,7 +450,11 @@ describe("ArbitrableEscrow", function () {
       await escrow.connect(funderAccount).deposit(fakeUSDToken.address, 100);
       await escrow.connect(funderAccount).deposit(fakeUSDToken.address, 100);
 
-      expect(await escrow.funds(emptyAddress, fakeUSDToken.address)).to.equal(200);
+      await fakeUSDToken.transfer(otherAccount1.address, 100);
+      await fakeUSDToken.connect(otherAccount1).approve(escrow.address, 100);
+      await escrow.connect(otherAccount1).deposit(fakeUSDToken.address, 100);
+
+      expect(await escrow.funds(emptyAddress, fakeUSDToken.address)).to.equal(300);
     });
 
     it("Should update funds when withdrawn", async function () {

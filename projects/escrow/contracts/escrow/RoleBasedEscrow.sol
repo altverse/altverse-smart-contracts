@@ -286,11 +286,12 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
         // For each token funded
         for (uint tokenIndex = 0; tokenIndex < _fundedTokens.length; tokenIndex++) {
             ERC20 token = _fundedTokens[tokenIndex];
+             _funds[address(0)][token] = 0;
 
             // record as zero address for tracking purpose of total funds.
             for (uint index = 0; index < _funders.length; index++) {
                 address funder = _funders[index];
-                _funds[address(0)][token] = _funds[funder][token];   
+                _funds[address(0)][token] += _funds[funder][token];   
             }
         }
     }
