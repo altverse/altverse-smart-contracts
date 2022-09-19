@@ -432,6 +432,61 @@ describe("ArbitrableEscrow", function () {
     });
   });
 
+  describe("Record Funds", function () {
+    it("Should have no funds record on beginning", async function () {
+      const { eventResult, fakeUSDToken, funderAccount, payeeAccount } = await createFunderEscrow(false);
+      const escrow = await ethers.getContractAt("ArbitrableEscrow", eventResult?.escrow);
+
+      expect(await escrow.funds(emptyAddress, fakeUSDToken.address)).to.equal(0);
+    });
+
+    it("Should update funds when deposited", async function () {
+      const { eventResult, fakeUSDToken, funderAccount, payeeAccount } = await createFunderEscrow(false);
+      const escrow = await ethers.getContractAt("ArbitrableEscrow", eventResult?.escrow);
+
+      await fakeUSDToken.transfer(funderAccount.address, 100);
+
+      await fakeUSDToken.connect(funderAccount).approve(escrow.address, 100);
+      await escrow.connect(funderAccount).deposit(fakeUSDToken.address, 100);
+
+      expect(await escrow.funds(emptyAddress, fakeUSDToken.address)).to.equal(100);
+    });
+
+    it("Should update funds when withdrawn", async function () {
+      const { eventResult, fakeUSDToken, funderAccount, payeeAccount } = await createFunderEscrow(false);
+      const escrow = await ethers.getContractAt("ArbitrableEscrow", eventResult?.escrow);
+
+      await fakeUSDToken.transfer(funderAccount.address, 100);
+
+      await expect(fakeUSDToken.connect(funderAccount).approve(escrow.address, 100)).not.to.be.reverted;
+      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, 100)).not.to.be.reverted;
+      await expect(escrow.connect(funderAccount).withdraw()).not.to.be.reverted;
+
+      expect(await escrow.funds(emptyAddress, fakeUSDToken.address)).to.equal(0);
+    });
+
+    it("Should NOT update funds on settlement", async function () {
+      const { eventResult, fakeUSDToken, funderAccount, payeeAccount } = await createFunderEscrow(false);
+
+      const escrow = await ethers.getContractAt("ArbitrableEscrow", eventResult?.escrow);
+
+      // Deposit
+      await fakeUSDToken.transfer(funderAccount.address, 1000);
+      await expect(fakeUSDToken.connect(funderAccount).approve(escrow.address, 1000)).not.to.be.reverted;
+      await expect(escrow.connect(funderAccount).deposit(fakeUSDToken.address, 1000)).not.to.be.reverted;
+
+      // Payee join & grant
+      await expect(escrow.connect(payeeAccount).registerAsPayee(ethers.utils.formatBytes32String("identifier"))).not.to.be.reverted;
+      await expect(escrow.connect(funderAccount).grantPayeeRole([payeeAccount.address])).not.to.be.reverted;
+
+      // Contract accepted and Settle
+      await expect(escrow.connect(funderAccount).activateContract()).not.to.be.reverted;
+      await expect(escrow.connect(funderAccount).settle(true)).not.to.be.reverted;
+
+      expect(await escrow.funds(emptyAddress, fakeUSDToken.address)).to.equal(1000);
+    });
+  });
+
   describe("Contract Activation", function () {
     it("Should not be able activate if there is no payee", async function () {
       const { eventResult, fakeUSDToken, funderAccount, payeeAccount } = await createFunderEscrow(false);
