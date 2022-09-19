@@ -290,7 +290,7 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
             // record as zero address for tracking purpose of total funds.
             for (uint index = 0; index < _funders.length; index++) {
                 address funder = _funders[index];
-                _funds[address(0)][token] += _funds[funder][token];   
+                _funds[address(0)][token] = _funds[funder][token];   
             }
         }
     }
@@ -330,7 +330,7 @@ contract RoleBasedEscrow is Initializable, AccessControl, EscrowMetadata {
                 // TODO: Put leftover amount to Treasury
                 // console.log("LeftOver: token - ", address(token));
                 // console.log("LeftOver: totalAmountPerToken - ", totalAmountPerToken);
-                token.safeTransfer(address(0x44988Fd0C8d026AfE4b1594e55Dfa141a804BCC0), totalAmountPerToken);
+                token.safeTransfer(address(0xc1B588e1b73a490F85e6D593266640BE2e03b05F), totalAmountPerToken);
             }
         }
 
