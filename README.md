@@ -9,5 +9,5 @@ Escrow Factory Contract (ArbitrableEscrowFactory.sol): `0x0D9e402b04F305fbAC4Be9
 
 ### BSC Mainnet
 Deployed with: `0xc1B588e1b73a490F85e6D593266640BE2e03b05F`  
-Escrow Base Contract (ArbitrableEscrow.sol): `0x9e5D74ef7f505BEE8Db48626eC8C4Cf9F7528DF9`  
-Escrow Factory Contract (ArbitrableEscrowFactory.sol): `0x410B52348CD4D7F6Ae3C86459C848f74F0C0dCeF`  
+Escrow Base Contract (ArbitrableEscrow.sol): `0x38e169FAd83aceA471487b891f81e0023939E389`  
+Escrow Factory Contract (ArbitrableEscrowFactory.sol): `0x934d585d8A1b9A8C7aEc4b79f3fe7Fd48d39e3E3`  
