@@ -450,7 +450,7 @@ describe("ArbitrableEscrow", function () {
       await escrow.connect(funderAccount).deposit(fakeUSDToken.address, 100);
       await escrow.connect(funderAccount).deposit(fakeUSDToken.address, 100);
 
-      expect(await escrow.funds(emptyAddress, fakeUSDToken.address)).to.equal(100);
+      expect(await escrow.funds(emptyAddress, fakeUSDToken.address)).to.equal(200);
     });
 
     it("Should update funds when withdrawn", async function () {
