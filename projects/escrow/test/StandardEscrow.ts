@@ -145,7 +145,7 @@ describe("StandardEscrow", function () {
       await fakeUSDToken.transfer(funderAccount.address, 1000);
       
       const amount = 0; // NOTE HERE!
-      expect(escrow.connect(funderAccount).createEscrow("StandardEscrow", payeeAccount.address, fakeUSDToken.address, amount)).be.reverted;
+      await expect(escrow.connect(funderAccount).createEscrow("StandardEscrow", payeeAccount.address, fakeUSDToken.address, amount)).be.reverted;
     });
 
     it("should be possible for a funder to withdraw the deposit before activation", async function () {
@@ -159,7 +159,7 @@ describe("StandardEscrow", function () {
       expect(+balanceOfEscrowAfterCreation).to.be.equal(amount);
       expect(+targetEscrowBeforeCreation.balance).to.be.equal(amount);
 
-      expect(escrow.connect(funderAccount).withdraw(contractId), "withdrawl must be possible before activation").not.to.be.reverted;
+      await expect(escrow.connect(funderAccount).withdraw(contractId), "withdrawl must be possible before activation").not.to.be.reverted;
 
       const balanceOfFunderAfterWithdrawl = await fakeUSDToken.balanceOf(funderAccount.address);
       const balanceOfEscrowAfterWithdrawl = await fakeUSDToken.balanceOf(escrow.address);
@@ -173,7 +173,7 @@ describe("StandardEscrow", function () {
   describe('activateContract', async function () {
     it('should not be reverted', async function () {
       const { escrow, contractId, payeeAccount } = await prepareEscrowCreation({});
-      expect(escrow.connect(payeeAccount).activateContract(contractId)).not.to.be.reverted;
+      await expect(escrow.connect(payeeAccount).activateContract(contractId)).not.to.be.reverted;
     });
 
     it('should be activated', async function () {
@@ -185,12 +185,13 @@ describe("StandardEscrow", function () {
     it('must not be activated by any other account except for the payee', async function () {
       // Note that the `prepareEscrowActivation` assumes the escrow is for payeeAccount not payeeAccount2
       const { escrow, contractId, payeeAccount2 } = await prepareEscrowCreation({});
-      expect(escrow.connect(payeeAccount2).activateContract(contractId)).to.be.reverted;
+      await expect(escrow.connect(payeeAccount2).activateContract(contractId)).to.be.reverted;
     });
 
     it("should not be activated if the balance of a contract is equal to zero", async function () {
-      const { escrow, contractId, payeeAccount } = await prepareEscrowCreation({ amount: 0 });
-      expect(escrow.connect(payeeAccount).activateContract(contractId)).to.be.reverted;
+      const { escrow, contractId, funderAccount, payeeAccount } = await prepareEscrowCreation({ amount: 1000 });
+      await expect(escrow.connect(funderAccount).withdraw(contractId), "withdrawl must be possible before activation").not.to.be.reverted;
+      await expect(escrow.connect(payeeAccount).activateContract(contractId)).to.be.reverted;
     });
   });
 
@@ -198,7 +199,7 @@ describe("StandardEscrow", function () {
     describe('autowithdrawl=false', async function () {
       it('should not be reverted', async function () {
         const { escrow, funderAccount, contractId } = await prepareEscrowActivation();
-        expect(escrow.connect(funderAccount).settle(contractId, false)).not.to.be.reverted;
+        await expect(escrow.connect(funderAccount).settle(contractId, false)).not.to.be.reverted;
       });
 
       it('should be finalized', async function () {
@@ -228,7 +229,7 @@ describe("StandardEscrow", function () {
         expect(+balanceOfPayeeBeforeWithdrawl, `balance of the payee should be 0 since it is not transferred yet`).to.be.equal(0);
         expect(+targetEscrowBeforeWithdrawl.balance).to.be.equal(1000);
 
-        expect(escrow.connect(payeeAccount).withdraw(contractId)).not.be.reverted;
+        await expect(escrow.connect(payeeAccount).withdraw(contractId)).not.be.reverted;
         const targetEscrowAfterWithdrawl = await escrow.getEscrow(contractId);
         const balanceOfEscrowAfterWithdrawl = await fakeUSDToken.balanceOf(escrow.address);
         const balanceOfPayeeAfterWithdrawl = await fakeUSDToken.balanceOf(payeeAccount.address);
@@ -242,7 +243,7 @@ describe("StandardEscrow", function () {
     describe('autowithdrawl=true', async function () {
       it('should not be reverted', async function () {
         const { escrow, funderAccount, contractId } = await prepareEscrowActivation();
-        expect(escrow.connect(funderAccount).settle(contractId, true)).not.to.be.reverted;
+        await expect(escrow.connect(funderAccount).settle(contractId, true)).not.to.be.reverted;
       });
 
       it('should be finalized', async function () {
@@ -335,11 +336,12 @@ describe("StandardEscrow", function () {
     it("should be reverted when the arguments are not properly configured", async function () {
       const { escrow, funderAccount } = await prepareMultipleEscrowCreation({ size: 10 });
       // wrong size
-      expect(escrow.connect(funderAccount).findEscrowsAsFunderByCursor(1, 0)).to.be.reverted;
+      await expect(escrow.connect(funderAccount).findEscrowsAsFunderByCursor(1, 0)).to.be.reverted;
       // too big size
-      expect(escrow.connect(funderAccount).findEscrowsAsFunderByCursor(1, 101)).to.be.reverted;
+      await expect(escrow.connect(funderAccount).findEscrowsAsFunderByCursor(1, 101)).to.be.reverted;
       // wrong cursor
-      expect(escrow.connect(funderAccount).findEscrowsAsFunderByCursor(-1, 101)).to.be.reverted;
+      // CHECK: it seems like minus value cannot be passed over
+      // await expect(escrow.connect(funderAccount).findEscrowsAsFunderByCursor(-1, 101)).to.be.reverted;
     });
 
     it("should return an empty array when the cursor is out of range", async function () {
@@ -428,11 +430,12 @@ describe("StandardEscrow", function () {
     it("should be reverted when the arguments are not properly configured", async function () {
       const { escrow, payeeAccount } = await prepareMultipleEscrowCreation({ size: 10 });
       // wrong size
-      expect(escrow.connect(payeeAccount).findEscrowsAsPayeeByCursor(1, 0)).to.be.reverted;
+      await expect(escrow.connect(payeeAccount).findEscrowsAsPayeeByCursor(1, 0)).to.be.reverted;
       // too big size
-      expect(escrow.connect(payeeAccount).findEscrowsAsPayeeByCursor(1, 101)).to.be.reverted;
+      await expect(escrow.connect(payeeAccount).findEscrowsAsPayeeByCursor(1, 101)).to.be.reverted;
       // wrong cursor
-      expect(escrow.connect(payeeAccount).findEscrowsAsPayeeByCursor(-1, 101)).to.be.reverted;
+      // CHECK: it seems like minus value cannot be passed over
+      // await expect(escrow.connect(payeeAccount).findEscrowsAsPayeeByCursor(-1, 101)).to.be.reverted;
     });
 
     it("should return an empty array when the cursor is out of range", async function () {

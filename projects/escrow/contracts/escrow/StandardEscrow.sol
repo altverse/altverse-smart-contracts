@@ -59,6 +59,7 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
     uint256 private _currentContractId = 1;
 
     function createEscrow(string memory title, address payee_, ERC20 token_, uint256 amount_) external nonContract {
+        require(amount_ > 0, "StandardEscrow: The amount must be greater than 0");
         EscrowContract memory newContract = EscrowContract({
             id: _currentContractId,
             title: title,
@@ -115,6 +116,7 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
         EscrowContract storage escrow = getEscrowSafe(contractId);
         require(escrow.state == State.INITIALIZED, "StandardEscrow: Escrow can be activated only after initialized");
         require(escrow.payee == msg.sender, "StandardEscrow: The payee does not match");
+        require(escrow.balance != 0, "StandardEscrow: Escrow with zero balance cannot be activated");
 
         escrow.state = State.ACTIVATED;
         
