@@ -22,7 +22,7 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
     using Address for address payable;
 
     event Deposited(address indexed funder, ERC20 erc20Token, uint256 amount, uint256 contractId);
-    event Withdrawn(address indexed payee, ERC20 erc20Token, uint256 amount);
+    event Withdrawn(address indexed actor, address indexed recipient, ERC20 erc20Token, uint256 amount);
     event ContractActivated(address indexed actor);
     event ContractFinalized(address indexed sender);
 
@@ -109,7 +109,7 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
         uint256 toTransfer = escrow.balance;
         SafeERC20.safeTransfer(escrow.token, to, toTransfer);
         escrow.balance = 0;
-        emit Withdrawn(msg.sender, escrow.token, toTransfer);
+        emit Withdrawn(msg.sender, to, escrow.token, toTransfer);
     }
 
     function activateContract(uint256 contractId) external virtual {
