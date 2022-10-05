@@ -132,6 +132,7 @@ describe("StandardEscrow", function () {
       expect(target.token).to.equal(fakeUSDToken.address);
       expect(target.funder).to.equal(funderAccount.address);
       expect(target.payee).to.equal(payeeAccount.address);
+      expect(+target.initial).to.equal(targetAmount);
       expect(+target.amount).to.equal(targetAmount); // Note casting by +target.amount since it's a BigNumber, same for below lines
       // Don't know why but block.timestamp indicate the time in the future.
       // expect(checkBlockTimestamp(+target.createdAt * 1000, timedJustBeforeCreation, Date.now(), 10000)).be.true; 

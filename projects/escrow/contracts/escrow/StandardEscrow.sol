@@ -46,6 +46,7 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
         address payee;
         ERC20 token;
         uint256 amount;
+        uint256 initial;
         uint256 balance;
         uint256 createdAt;
     }
@@ -69,6 +70,7 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
             payee: payee_,
             token: token_,
             amount: amount_,
+            initial: amount_,
             balance: amount_
         });
 
