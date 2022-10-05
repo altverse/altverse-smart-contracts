@@ -45,7 +45,7 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
         address funder;
         address payee;
         ERC20 token;
-        uint256 amount;
+        uint256 determined;
         uint256 initial;
         uint256 balance;
         uint256 createdAt;
@@ -69,7 +69,7 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
             funder: msg.sender,
             payee: payee_,
             token: token_,
-            amount: amount_,
+            determined: 0,
             initial: amount_,
             balance: amount_
         });
@@ -121,6 +121,7 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
         require(escrow.balance != 0, "StandardEscrow: Escrow with zero balance cannot be activated");
 
         escrow.state = State.ACTIVATED;
+        escrow.determined = escrow.balance;
         
         emit ContractActivated(msg.sender);
     }

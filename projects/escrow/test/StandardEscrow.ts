@@ -133,7 +133,7 @@ describe("StandardEscrow", function () {
       expect(target.funder).to.equal(funderAccount.address);
       expect(target.payee).to.equal(payeeAccount.address);
       expect(+target.initial).to.equal(targetAmount);
-      expect(+target.amount).to.equal(targetAmount); // Note casting by +target.amount since it's a BigNumber, same for below lines
+      expect(+target.determined).to.equal(0); // Note casting by +target.amount since it's a BigNumber, same for below lines
       // Don't know why but block.timestamp indicate the time in the future.
       // expect(checkBlockTimestamp(+target.createdAt * 1000, timedJustBeforeCreation, Date.now(), 10000)).be.true; 
       expect(+target.balance).to.equal(targetAmount);
@@ -194,6 +194,19 @@ describe("StandardEscrow", function () {
       await expect(escrow.connect(funderAccount).withdraw(contractId), "withdrawl must be possible before activation").not.to.be.reverted;
       await expect(escrow.connect(payeeAccount).activateContract(contractId)).to.be.reverted;
     });
+
+    it('should set determined as the value of balance just before activation', async function () {
+      const { escrow, contractId, payeeAccount } = await prepareEscrowCreation({ amount: 1000 });
+
+      const before = await escrow.getEscrow(contractId);
+      const balanceBefore = before.balance;
+      expect(before.determined).to.be.equal(0);
+      expect(balanceBefore).to.be.equal(1000);
+      await expect(escrow.connect(payeeAccount).activateContract(contractId)).not.to.be.reverted;
+
+      const after = await escrow.getEscrow(contractId);
+      expect(after.determined).to.be.equal(balanceBefore);
+    })
   });
 
   describe('settle', async function () {
