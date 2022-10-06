@@ -21,10 +21,10 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
     using SafeERC20 for ERC20;
     using Address for address payable;
 
-    event Deposited(address indexed funder, ERC20 erc20Token, uint256 amount, uint256 contractId);
-    event Withdrawn(address indexed actor, address indexed recipient, ERC20 erc20Token, uint256 amount);
-    event ContractActivated(address indexed actor);
-    event ContractFinalized(address indexed sender);
+    event Deposited(uint256 contractId, address indexed funder, ERC20 erc20Token, uint256 amount);
+    event Withdrawn(uint256 contractId, address indexed actor, address indexed recipient, ERC20 erc20Token, uint256 amount);
+    event ContractActivated(uint256 contractId, address indexed payee);
+    event ContractFinalized(uint256 contractId, address indexed funder);
 
     modifier nonContract() {
         require(!_isContract(msg.sender), "Contract not allowed");
@@ -80,7 +80,7 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
 
         ERC20 erc20Token = ERC20(token_);
 
-        emit Deposited(msg.sender, token_, amount_, _currentContractId++);
+        emit Deposited(_currentContractId++, msg.sender, token_, amount_);
         erc20Token.safeTransferFrom(msg.sender, address(this), amount_);
     }
 
@@ -115,7 +115,7 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
         }
 
         ERC20 erc20Token = ERC20(token_);
-        emit Deposited(msg.sender, token_, amount_, contractId);
+        emit Deposited(contractId, msg.sender, token_, amount_);
         erc20Token.safeTransferFrom(msg.sender, address(this), amount_);
     }
 
@@ -128,7 +128,7 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
         uint256 toTransfer = escrow.balance;
         SafeERC20.safeTransfer(escrow.token, to, toTransfer);
         escrow.balance = 0;
-        emit Withdrawn(msg.sender, to, escrow.token, toTransfer);
+        emit Withdrawn(escrow.id, msg.sender, to, escrow.token, toTransfer);
     }
 
     function activateContract(uint256 contractId) external virtual {
@@ -141,7 +141,7 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
         escrow.state = State.ACTIVATED;
         escrow.determined = escrow.balance;
         
-        emit ContractActivated(msg.sender);
+        emit ContractActivated(escrow.id, msg.sender);
     }
 
     /**
@@ -166,7 +166,7 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
 
     function _finalize(EscrowContract storage escrow) internal {
         escrow.state = State.FINALIZED;
-        emit ContractFinalized(msg.sender);
+        emit ContractFinalized(escrow.id, msg.sender);
     }
 
     /**

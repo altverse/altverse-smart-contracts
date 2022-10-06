@@ -108,7 +108,7 @@ describe("StandardEscrow", function () {
 
   describe('createEscrow', async function () {
     it("should create a escrow properly", async function () {
-      const { standardEscrow, factoryAccount, funderAccount, payeeAccount, fakeUSDToken, fakeUSDToken2 } = await loadFixture(deployEscrowFixture);
+      const { standardEscrow, funderAccount, payeeAccount, fakeUSDToken } = await loadFixture(deployEscrowFixture);
       const escrow = await ethers.getContractAt("StandardEscrow", standardEscrow.address);
       await fakeUSDToken.connect(funderAccount).approve(escrow.address, 1000);
       await fakeUSDToken.transfer(funderAccount.address, 1000);
@@ -540,6 +540,88 @@ describe("StandardEscrow", function () {
       const [result, total] = await escrow.connect(noInfoAccount).findEscrowsAsPayeeByCursor(0, 1);
       expect(result.length).to.equal(0);
       expect(+total).to.be.equal(0);
+    });
+  });
+
+  describe('Event Emission', function () {
+    describe('Deposited', function () {
+      it("should emit when a contract is created", async function () {
+        const { standardEscrow, factoryAccount, funderAccount, payeeAccount, funderAccount2, payeeAccount2, fakeUSDToken, fakeUSDToken2 } = await loadFixture(deployEscrowFixture);
+        const escrow = await ethers.getContractAt("StandardEscrow", standardEscrow.address);
+        await fakeUSDToken.connect(funderAccount).approve(escrow.address, 1000);
+        await fakeUSDToken.transfer(funderAccount.address, 1000);
+        await expect(escrow.connect(funderAccount).createEscrow("TEST_TITLE", payeeAccount.address, fakeUSDToken.address, 1000))
+          .to.emit(escrow, "Deposited")
+          .withArgs(1, funderAccount.address, fakeUSDToken.address, 1000);
+      });
+
+      it("should emit whenever a new deposit is made after creation", async function () {
+        const { escrow, contractId, funderAccount, fakeUSDToken } = await prepareEscrowCreation({ approve: 2000, mint: 2000, amount: 1000 });
+        await expect(escrow.connect(funderAccount).deposit(contractId, fakeUSDToken.address, 100))
+          .to.emit(escrow, "Deposited")
+          .withArgs(1, funderAccount.address, fakeUSDToken.address, 100);
+
+        await expect(escrow.connect(funderAccount).deposit(contractId, fakeUSDToken.address, 200))
+          .to.emit(escrow, "Deposited")
+          .withArgs(1, funderAccount.address, fakeUSDToken.address, 200);
+
+        await expect(escrow.connect(funderAccount).deposit(contractId, fakeUSDToken.address, 300))
+          .to.emit(escrow, "Deposited")
+          .withArgs(1, funderAccount.address, fakeUSDToken.address, 300)
+      });
+
+      it("should emit whenever a new deposit is made after activation", async function () {
+        const { escrow, contractId, funderAccount, fakeUSDToken } = await prepareEscrowActivation({ approve: 2000, mint: 2000, amount: 1000 });
+        await expect(escrow.connect(funderAccount).deposit(contractId, fakeUSDToken.address, 100))
+          .to.emit(escrow, "Deposited")
+          .withArgs(1, funderAccount.address, fakeUSDToken.address, 100);
+
+        await expect(escrow.connect(funderAccount).deposit(contractId, fakeUSDToken.address, 200))
+          .to.emit(escrow, "Deposited")
+          .withArgs(1, funderAccount.address, fakeUSDToken.address, 200);
+
+        await expect(escrow.connect(funderAccount).deposit(contractId, fakeUSDToken.address, 300))
+          .to.emit(escrow, "Deposited")
+          .withArgs(1, funderAccount.address, fakeUSDToken.address, 300)
+      });
+    });
+    describe('Withdrawn', function () {
+      it('should emit when a withdrawal by the funder is made after creation', async function () {
+        const { escrow, contractId, funderAccount, fakeUSDToken } = await prepareEscrowCreation({ approve: 2000, mint: 2000, amount: 1000 });
+        await expect(escrow.connect(funderAccount).withdraw(contractId))
+          .to.emit(escrow, "Withdrawn")
+          .withArgs(contractId, funderAccount.address, funderAccount.address, fakeUSDToken.address, 1000);
+      });
+
+      it('should emit when a withdrawal by the payee is made after finalized', async function () {
+        const { escrow, contractId, payeeAccount, fakeUSDToken } = await prepareEscrowSettle({ approve: 2000, mint: 2000, amount: 1000, auto: false });
+        await expect(escrow.connect(payeeAccount).withdraw(contractId))
+          .to.emit(escrow, "Withdrawn")
+          .withArgs(contractId, payeeAccount.address, payeeAccount.address, fakeUSDToken.address, 1000);
+      });
+
+      it('should emit when the contract is settled with autowithdraw=true by the funder', async function () {
+        const { escrow, contractId, funderAccount, payeeAccount, fakeUSDToken } = await prepareEscrowActivation({});
+        await expect(escrow.connect(funderAccount).settle(contractId, true))
+          .to.emit(escrow, "Withdrawn")
+          .withArgs(contractId, funderAccount.address, payeeAccount.address, fakeUSDToken.address, 1000);
+      });
+    });
+    describe('ContractActivated', function () {
+      it('should emit when the contract is activated', async function () {
+        const { escrow, contractId, funderAccount, payeeAccount, fakeUSDToken } = await prepareEscrowCreation({});
+        await expect(escrow.connect(payeeAccount).activateContract(contractId))
+          .to.emit(escrow, "ContractActivated")
+          .withArgs(contractId, payeeAccount.address);
+      });
+    });
+    describe('ContractFinalized', function () {
+      it('should emit when the contract is finalized', async function () {
+        const { escrow, contractId, funderAccount } = await prepareEscrowActivation({});
+        await expect(escrow.connect(funderAccount).settle(contractId, false))
+          .to.emit(escrow, "ContractFinalized")
+          .withArgs(contractId, funderAccount.address);
+      });
     });
   });
 });
