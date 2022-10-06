@@ -97,7 +97,7 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
      */
     function withdraw(uint256 contractId) external virtual nonContract nonReentrant {
         EscrowContract storage escrow = getEscrowSafe(contractId);
-        require(withdrawlAllowed(msg.sender, escrow), "StandardEscrow: Cannot withdraw on current state");
+        require(withdrawalAllowed(msg.sender, escrow), "StandardEscrow: Cannot withdraw on current state");
 
         _withdraw(escrow, msg.sender);
     }
@@ -119,7 +119,7 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
         erc20Token.safeTransferFrom(msg.sender, address(this), amount_);
     }
 
-    function withdrawlAllowed(address actor, EscrowContract memory escrow) public view virtual returns (bool) {
+    function withdrawalAllowed(address actor, EscrowContract memory escrow) public view virtual returns (bool) {
         return (escrow.state == State.INITIALIZED && escrow.funder == actor)
           || (escrow.state == State.FINALIZED && escrow.payee == actor);
     }
