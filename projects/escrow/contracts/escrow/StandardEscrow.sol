@@ -102,6 +102,23 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
         _withdraw(escrow, msg.sender);
     }
 
+    function deposit(uint256 contractId, ERC20 token_, uint256 amount_) external virtual nonContract nonReentrant {
+        EscrowContract storage escrow = getEscrowSafe(contractId);
+        require(escrow.state != State.FINALIZED, "StandardEscrow: deposit is possible before finalization");
+        require(escrow.funder == msg.sender, "StandardEscrow: The funder does not match");
+        require(escrow.token == token_, "StandardEscrow: Provided token does not match initial deposit");
+        
+        escrow.balance += amount_;
+
+        if (escrow.state == State.ACTIVATED) {
+            escrow.determined += amount_;
+        }
+
+        ERC20 erc20Token = ERC20(token_);
+        emit Deposited(msg.sender, token_, amount_, contractId);
+        erc20Token.safeTransferFrom(msg.sender, address(this), amount_);
+    }
+
     function withdrawlAllowed(address actor, EscrowContract memory escrow) public view virtual returns (bool) {
         return (escrow.state == State.INITIALIZED && escrow.funder == actor)
           || (escrow.state == State.FINALIZED && escrow.payee == actor);

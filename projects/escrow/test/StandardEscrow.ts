@@ -293,6 +293,53 @@ describe("StandardEscrow", function () {
     });
   });
 
+  describe('deposit', function () {
+    it("should deposit more balance after creation", async function () {
+      const initial = 1000;
+      const { escrow, contractId, funderAccount, fakeUSDToken } = await prepareEscrowCreation({ approve: 2000, mint: 2000, amount: initial });
+      const before = await escrow.getEscrow(contractId);
+      expect(before.balance).to.be.equal(initial);
+
+      const more = 1000;
+      await expect(escrow.connect(funderAccount).deposit(contractId, fakeUSDToken.address, more)).not.be.reverted;
+      const after = await escrow.getEscrow(contractId);
+      expect(after.balance).to.be.equal(initial + more);
+    });
+
+    it("should deposit more balance after activation", async function () {
+      const initial = 1000;
+      const { escrow, contractId, funderAccount, fakeUSDToken } = await prepareEscrowActivation({ approve: 2000, mint: 2000, amount: initial });
+      const before = await escrow.getEscrow(contractId);
+      expect(before.balance).to.be.equal(initial);
+      expect(before.determined).to.be.equal(initial);
+
+      const more = 1000;
+      await expect(escrow.connect(funderAccount).deposit(contractId, fakeUSDToken.address, more)).not.be.reverted;
+      const after = await escrow.getEscrow(contractId);
+      expect(after.balance).to.be.equal(initial + more);
+      expect(after.determined).to.be.equal(initial + more);
+    });
+
+    it("should be reverted if the funder does not match", async function () {
+      const initial = 1000;
+      const { escrow, contractId, funderAccount2, fakeUSDToken } = await prepareEscrowCreation({ approve: 2000, mint: 2000, amount: initial });
+      const more = 1000;
+      await expect(escrow.connect(funderAccount2).deposit(contractId, fakeUSDToken.address, more)).to.be.reverted;
+    });
+
+    it("should be reverted if the state is 'Finalized'", async function () {
+      const { escrow, contractId, funderAccount, fakeUSDToken } = await prepareEscrowSettle({ auto: false });
+      const more = 1000;
+      await expect(escrow.connect(funderAccount).deposit(contractId, fakeUSDToken.address, more)).to.be.reverted;
+    });
+
+    it("should be reverted if the token does not match", async function () {
+      const initial = 1000;
+      const { escrow, contractId, funderAccount, fakeUSDToken2 } = await prepareEscrowCreation({ approve: 2000, mint: 2000, amount: initial });
+      const more = 1000;
+      await expect(escrow.connect(funderAccount).deposit(contractId, fakeUSDToken2.address, more)).to.be.reverted;
+    });
+  });
 
   describe('findEscrowsAsFunder', async function () {
     it("should find escrows of a payee with given pagination", async function () {
