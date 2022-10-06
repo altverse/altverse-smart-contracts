@@ -173,7 +173,7 @@ describe("StandardEscrow", function () {
       expect(+balanceOfEscrowAfterCreation).to.be.equal(amount);
       expect(+targetEscrowBeforeCreation.balance).to.be.equal(amount);
 
-      await expect(escrow.connect(funderAccount).withdraw(contractId), "withdrawal must be possible before activation").not.to.be.reverted;
+      await expect(escrow.connect(funderAccount).withdraw(contractId, amount), "withdrawal must be possible before activation").not.to.be.reverted;
 
       const balanceOfFunderAfterWithdrawal = await fakeUSDToken.balanceOf(funderAccount.address);
       const balanceOfEscrowAfterWithdrawal = await fakeUSDToken.balanceOf(escrow.address);
@@ -204,7 +204,7 @@ describe("StandardEscrow", function () {
 
     it("should not be activated if the balance of a contract is equal to zero", async function () {
       const { escrow, contractId, funderAccount, payeeAccount } = await prepareEscrowCreation({ amount: 1000 });
-      await expect(escrow.connect(funderAccount).withdraw(contractId), "withdrawal must be possible before activation").not.to.be.reverted;
+      await expect(escrow.connect(funderAccount).withdraw(contractId, 1000), "withdrawal must be possible before activation").not.to.be.reverted;
       await expect(escrow.connect(payeeAccount).activateContract(contractId)).to.be.reverted;
     });
 
@@ -224,7 +224,7 @@ describe("StandardEscrow", function () {
     it("should not be activated if the balance of a contract is less than initial amount", async function () {
       const initial = 1000;
       const { escrow, contractId, funderAccount, payeeAccount, fakeUSDToken } = await prepareEscrowCreation({ amount: initial, approve: 2000, mint: 2000 }); 
-      await expect(escrow.connect(funderAccount).withdraw(contractId)).not.to.be.reverted;
+      await expect(escrow.connect(funderAccount).withdraw(contractId, initial)).not.to.be.reverted;
 
       const amountLesserThanInitial = 500;
       await expect(escrow.connect(funderAccount).deposit(contractId, fakeUSDToken.address, amountLesserThanInitial)).not.to.be.reverted;
@@ -271,7 +271,7 @@ describe("StandardEscrow", function () {
         expect(+targetEscrowBeforeWithdrawal.balance, `balance of the payee should be 0 since it is not transferred yet`).to.be.equal(1000);
         expect(+balanceOfPayeeBeforeWithdrawal).to.be.equal(0);
 
-        await expect(escrow.connect(payeeAccount).withdraw(contractId)).not.be.reverted;
+        await expect(escrow.connect(payeeAccount).withdraw(contractId, 1000)).not.be.reverted;
         const targetEscrowAfterWithdrawal = await escrow.getEscrow(contractId);
         const balanceOfEscrowAfterWithdrawal = await fakeUSDToken.balanceOf(escrow.address);
         const balanceOfPayeeAfterWithdrawal = await fakeUSDToken.balanceOf(payeeAccount.address);
@@ -589,14 +589,14 @@ describe("StandardEscrow", function () {
     describe('Withdrawn', function () {
       it('should emit when a withdrawal by the funder is made after creation', async function () {
         const { escrow, contractId, funderAccount, fakeUSDToken } = await prepareEscrowCreation({ approve: 2000, mint: 2000, amount: 1000 });
-        await expect(escrow.connect(funderAccount).withdraw(contractId))
+        await expect(escrow.connect(funderAccount).withdraw(contractId, 1000))
           .to.emit(escrow, "Withdrawn")
           .withArgs(contractId, funderAccount.address, funderAccount.address, fakeUSDToken.address, 1000);
       });
 
       it('should emit when a withdrawal by the payee is made after finalized', async function () {
         const { escrow, contractId, payeeAccount, fakeUSDToken } = await prepareEscrowSettle({ approve: 2000, mint: 2000, amount: 1000, auto: false });
-        await expect(escrow.connect(payeeAccount).withdraw(contractId))
+        await expect(escrow.connect(payeeAccount).withdraw(contractId, 1000))
           .to.emit(escrow, "Withdrawn")
           .withArgs(contractId, payeeAccount.address, payeeAccount.address, fakeUSDToken.address, 1000);
       });

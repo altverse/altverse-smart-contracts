@@ -95,11 +95,11 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
      *
      * Emits a {Withdrawn} event.
      */
-    function withdraw(uint256 contractId) external virtual nonContract nonReentrant {
+    function withdraw(uint256 contractId, uint256 amount) external virtual nonContract nonReentrant {
         EscrowContract storage escrow = getEscrowSafe(contractId);
-        require(withdrawalAllowed(msg.sender, escrow), "StandardEscrow: Cannot withdraw on current state");
+        require(withdrawalAllowed(escrow, msg.sender, amount), "StandardEscrow: Cannot withdraw on current state");
 
-        _withdraw(escrow, msg.sender);
+        _withdraw(escrow, msg.sender, amount);
     }
 
     function deposit(uint256 contractId, ERC20 token_, uint256 amount_) external virtual nonContract nonReentrant {
@@ -119,16 +119,16 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
         erc20Token.safeTransferFrom(msg.sender, address(this), amount_);
     }
 
-    function withdrawalAllowed(address actor, EscrowContract memory escrow) public view virtual returns (bool) {
+    function withdrawalAllowed(EscrowContract memory escrow, address actor, uint256 amount) public view virtual returns (bool) {
         return (escrow.state == State.INITIALIZED && escrow.funder == actor)
-          || (escrow.state == State.FINALIZED && escrow.payee == actor);
+          || (escrow.state == State.FINALIZED && escrow.payee == actor)
+          || escrow.balance >= amount;
     }
 
-    function _withdraw(EscrowContract storage escrow, address to) private {
-        uint256 toTransfer = escrow.balance;
-        SafeERC20.safeTransfer(escrow.token, to, toTransfer);
-        escrow.balance = 0;
-        emit Withdrawn(escrow.id, msg.sender, to, escrow.token, toTransfer);
+    function _withdraw(EscrowContract storage escrow, address to, uint256 amount) private {
+        SafeERC20.safeTransfer(escrow.token, to, amount);
+        escrow.balance -= amount;
+        emit Withdrawn(escrow.id, msg.sender, to, escrow.token, amount);
     }
 
     function activateContract(uint256 contractId) external virtual {
@@ -160,7 +160,7 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
         _finalize(escrow);
 
         if (autoWithdraw) {
-            _withdraw(escrow, escrow.payee);
+            _withdraw(escrow, escrow.payee, escrow.balance);
         }
     }
 
