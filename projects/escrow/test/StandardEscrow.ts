@@ -358,6 +358,54 @@ describe("StandardEscrow", function () {
         expect(+targetEscrowAfterWithdrawal.balance).to.be.equal(0);
       });
     });
+
+    describe('partial withdrawal', function () {
+      it("should be possible for a funder to withdraw partially before activation", async function () {
+        const amount = 1000;
+        const { escrow, contractId, funderAccount, fakeUSDToken } = await prepareEscrowCreation({ amount });
+        
+        const balanceOfFunderAfterCreation = await fakeUSDToken.balanceOf(funderAccount.address);
+        const balanceOfEscrowAfterCreation = await fakeUSDToken.balanceOf(escrow.address);
+        const targetEscrowBeforeCreation = await escrow.getEscrow(contractId);
+        expect(+balanceOfFunderAfterCreation).to.be.equal(0);
+        expect(+balanceOfEscrowAfterCreation).to.be.equal(amount);
+        expect(+targetEscrowBeforeCreation.balance).to.be.equal(amount);
+
+        const paritalAmount = 1;
+  
+        await expect(escrow.connect(funderAccount).withdraw(contractId, paritalAmount), "partial withdrawal must be possible before activation").not.to.be.reverted;
+  
+        const balanceOfFunderAfterWithdrawal = await fakeUSDToken.balanceOf(funderAccount.address);
+        const balanceOfEscrowAfterWithdrawal = await fakeUSDToken.balanceOf(escrow.address);
+        const targetEscrowBeforeWithdrawal = await escrow.getEscrow(contractId);
+        expect(+balanceOfFunderAfterWithdrawal).to.be.equal(paritalAmount);
+        expect(+balanceOfEscrowAfterWithdrawal).to.be.equal(amount - paritalAmount);
+        expect(+targetEscrowBeforeWithdrawal.balance).to.be.equal(amount - paritalAmount);
+      });
+      
+      it('should be possible for a payee to withdraw partially the deposit after finalization', async function () {
+        const amount = 1000;
+        const { escrow, contractId, fakeUSDToken, payeeAccount } = await prepareEscrowSettle({ auto: false, amount });
+        const targetEscrowBeforeWithdrawal = await escrow.getEscrow(contractId);
+        const balanceOfEscrowBeforeWithdrawal = await fakeUSDToken.balanceOf(escrow.address);
+        const balanceOfPayeeBeforeWithdrawal = await fakeUSDToken.balanceOf(payeeAccount.address);
+        
+        expect(+targetEscrowBeforeWithdrawal.balance, 'balance of the escrow should be still the same as the first place').to.be.equal(amount);
+        expect(+balanceOfEscrowBeforeWithdrawal).to.be.equal(amount);
+        expect(+targetEscrowBeforeWithdrawal.balance, `balance of the payee should be 0 since it is not transferred yet`).to.be.equal(amount);
+        expect(+balanceOfPayeeBeforeWithdrawal).to.be.equal(0);
+
+        const paritalAmount = 1;
+        await expect(escrow.connect(payeeAccount).withdraw(contractId, paritalAmount)).not.be.reverted;
+        const targetEscrowAfterWithdrawal = await escrow.getEscrow(contractId);
+        const balanceOfEscrowAfterWithdrawal = await fakeUSDToken.balanceOf(escrow.address);
+        const balanceOfPayeeAfterWithdrawal = await fakeUSDToken.balanceOf(payeeAccount.address);
+        
+        expect(+balanceOfEscrowAfterWithdrawal, 'balance of the escrow should be still the same as the first place').to.be.equal(amount - paritalAmount);
+        expect(+balanceOfPayeeAfterWithdrawal, `balance of the payee should be 0 since it is not transferred yet`).to.be.equal(paritalAmount);
+        expect(+targetEscrowAfterWithdrawal.balance).to.be.equal(amount - paritalAmount);
+      });
+    });
   });
 
   describe('findEscrowsAsFunder', async function () {
