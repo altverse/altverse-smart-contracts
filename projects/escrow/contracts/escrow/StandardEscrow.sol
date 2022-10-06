@@ -136,6 +136,7 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
         require(escrow.state == State.INITIALIZED, "StandardEscrow: Escrow can be activated only after initialized");
         require(escrow.payee == msg.sender, "StandardEscrow: The payee does not match");
         require(escrow.balance != 0, "StandardEscrow: Escrow with zero balance cannot be activated");
+        require(escrow.balance >= escrow.initial, "StandardEscrow: Escrow with zero balance cannot be activated");
 
         escrow.state = State.ACTIVATED;
         escrow.determined = escrow.balance;

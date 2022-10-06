@@ -220,6 +220,20 @@ describe("StandardEscrow", function () {
       const after = await escrow.getEscrow(contractId);
       expect(after.determined).to.be.equal(balanceBefore);
     })
+
+    it("should not be activated if the balance of a contract is less than initial amount", async function () {
+      const initial = 1000;
+      const { escrow, contractId, funderAccount, payeeAccount, fakeUSDToken } = await prepareEscrowCreation({ amount: initial, approve: 2000, mint: 2000 }); 
+      await expect(escrow.connect(funderAccount).withdraw(contractId)).not.to.be.reverted;
+
+      const amountLesserThanInitial = 500;
+      await expect(escrow.connect(funderAccount).deposit(contractId, fakeUSDToken.address, amountLesserThanInitial)).not.to.be.reverted;
+      const targetEscrow = await escrow.getEscrow(contractId);
+      expect(targetEscrow.balance).to.be.equal(500);
+      expect(targetEscrow.initial).to.be.equal(initial);
+
+      await expect(escrow.connect(payeeAccount).activateContract(contractId)).to.be.reverted;
+    });
   });
 
   describe('settle', async function () {
