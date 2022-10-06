@@ -5,6 +5,19 @@ import { ethers as eth } from "ethers";
 import { ethers } from "hardhat";
 import { ERC20FakeUSDToken, ERC20FakeUSDToken2, StandardEscrow__factory } from "../typechain-types";
 
+type EscrowCreationParam = {
+  title?: string;
+  amount?: number;
+  approve?: number;
+  mint?: number;
+}
+
+type EscrowActivationParam = EscrowCreationParam;
+
+type EscrowFinalizationParam = EscrowActivationParam & {
+  auto: boolean;
+}
+
 describe("StandardEscrow", function () {
   const INITIALIZED = 0;
   const ACTIVATED = 1;
@@ -31,11 +44,11 @@ describe("StandardEscrow", function () {
     return { standardEscrow, factoryAccount, funderAccount, payeeAccount, funderAccount2, payeeAccount2, fakeUSDToken, fakeUSDToken2 };
   }
 
-  async function prepareEscrowCreation({ title = 'TestTitle', amount = 1000 }: { title?: string, amount?: number }) {
+  async function prepareEscrowCreation({ title = 'TestTitle', amount = 1000, approve, mint }: EscrowCreationParam) {
     const { standardEscrow, factoryAccount, funderAccount, payeeAccount, funderAccount2, payeeAccount2, fakeUSDToken, fakeUSDToken2 } = await loadFixture(deployEscrowFixture);
     const escrow = await ethers.getContractAt("StandardEscrow", standardEscrow.address);
-    await fakeUSDToken.connect(funderAccount).approve(escrow.address, amount);
-    await fakeUSDToken.transfer(funderAccount.address, amount);
+    await fakeUSDToken.connect(funderAccount).approve(escrow.address, approve ?? amount);
+    await fakeUSDToken.transfer(funderAccount.address, mint ?? amount);
 
     const tx = await escrow.connect(funderAccount).createEscrow(title, payeeAccount.address, fakeUSDToken.address, amount);
     const txReceipt = await tx.wait();
@@ -72,16 +85,16 @@ describe("StandardEscrow", function () {
     return { escrow, contractIds, standardEscrow, factoryAccount, funderAccount, payeeAccount, funderAccount2, payeeAccount2, fakeUSDToken, fakeUSDToken2 };
   }
 
-  async function prepareEscrowActivation() {
-    const { escrow, contractId, standardEscrow, factoryAccount, funderAccount, payeeAccount, funderAccount2, payeeAccount2, fakeUSDToken, fakeUSDToken2 } = await prepareEscrowCreation({});
+  async function prepareEscrowActivation(params: EscrowActivationParam) {
+    const { escrow, contractId, standardEscrow, factoryAccount, funderAccount, payeeAccount, funderAccount2, payeeAccount2, fakeUSDToken, fakeUSDToken2 } = await prepareEscrowCreation(params);
     const tx = await escrow.connect(payeeAccount).activateContract(contractId);
     await tx.wait();
     return { escrow, contractId, standardEscrow, factoryAccount, funderAccount, payeeAccount, funderAccount2, payeeAccount2, fakeUSDToken, fakeUSDToken2 };
   }
 
-  async function prepareEscrowSettle({ auto }: { auto: boolean }) {
-    const { escrow, contractId, standardEscrow, factoryAccount, funderAccount, payeeAccount, funderAccount2, payeeAccount2, fakeUSDToken, fakeUSDToken2 } = await prepareEscrowActivation();
-    const tx = await escrow.connect(funderAccount).settle(contractId, auto);
+  async function prepareEscrowSettle(params: EscrowFinalizationParam) {
+    const { escrow, contractId, standardEscrow, factoryAccount, funderAccount, payeeAccount, funderAccount2, payeeAccount2, fakeUSDToken, fakeUSDToken2 } = await prepareEscrowActivation(params);
+    const tx = await escrow.connect(funderAccount).settle(contractId, params.auto);
     await tx.wait();
     return { escrow, contractId, standardEscrow, factoryAccount, funderAccount, payeeAccount, funderAccount2, payeeAccount2, fakeUSDToken, fakeUSDToken2 };
   }
@@ -178,7 +191,7 @@ describe("StandardEscrow", function () {
     });
 
     it('should be activated', async function () {
-      const { escrow, contractId } = await prepareEscrowActivation();
+      const { escrow, contractId } = await prepareEscrowActivation({});
       const targetContract = await escrow.getEscrow(contractId);
       expect(targetContract.state).to.be.equal(ACTIVATED);
     })
@@ -212,7 +225,7 @@ describe("StandardEscrow", function () {
   describe('settle', async function () {
     describe('autowithdrawl=false', async function () {
       it('should not be reverted', async function () {
-        const { escrow, funderAccount, contractId } = await prepareEscrowActivation();
+        const { escrow, funderAccount, contractId } = await prepareEscrowActivation({});
         await expect(escrow.connect(funderAccount).settle(contractId, false)).not.to.be.reverted;
       });
 
@@ -256,7 +269,7 @@ describe("StandardEscrow", function () {
     
     describe('autowithdrawl=true', async function () {
       it('should not be reverted', async function () {
-        const { escrow, funderAccount, contractId } = await prepareEscrowActivation();
+        const { escrow, funderAccount, contractId } = await prepareEscrowActivation({});
         await expect(escrow.connect(funderAccount).settle(contractId, true)).not.to.be.reverted;
       });
 
