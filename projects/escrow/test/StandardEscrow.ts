@@ -420,7 +420,7 @@ describe("StandardEscrow", function () {
       let size = 3;
       let cursor = (page - 1) * size;
 
-      const [escrowsOfPayee, t1] = await escrow.connect(funderAccount).findEscrowsAsFunderByCursor(cursor, size);
+      const [escrowsOfPayee, t1] = await escrow.findEscrowsAsFunderByCursor(funderAccount.address, cursor, size);
       expect(escrowsOfPayee).to.be.lengthOf(size);
       expect(+t1).to.be.equal(numOfEscrows); // Note that coercion by +t1, since `t1` is ethers.BigNumber. below are same.
 
@@ -434,7 +434,7 @@ describe("StandardEscrow", function () {
       page = 2;
       size = 3;
       cursor = (page - 1) * size;
-      const [escrowsOfPayee2, t2] = await escrow.connect(funderAccount).findEscrowsAsFunderByCursor(cursor, size);
+      const [escrowsOfPayee2, t2] = await escrow.findEscrowsAsFunderByCursor(funderAccount.address, cursor, size);
       expect(escrowsOfPayee2).to.be.lengthOf(size);
       expect(+t2).to.be.equal(numOfEscrows);
 
@@ -448,7 +448,7 @@ describe("StandardEscrow", function () {
       page = 3;
       size = 3;
       cursor = (page - 1) * size;
-      const [escrowsOfPayee3, t3] = await escrow.connect(funderAccount).findEscrowsAsFunderByCursor(cursor, size);
+      const [escrowsOfPayee3, t3] = await escrow.findEscrowsAsFunderByCursor(funderAccount.address, cursor, size);
       expect(escrowsOfPayee3).to.be.lengthOf(size);
       expect(+t3).to.be.equal(numOfEscrows);
 
@@ -462,7 +462,7 @@ describe("StandardEscrow", function () {
       page = 4;
       size = 3;
       cursor = (page - 1) * size;
-      const [escrowsOfPayee4, t4] = await escrow.connect(funderAccount).findEscrowsAsFunderByCursor(cursor, size);
+      const [escrowsOfPayee4, t4] = await escrow.findEscrowsAsFunderByCursor(funderAccount.address, cursor, size);
 
       expect(escrowsOfPayee4).to.be.lengthOf(numOfEscrows % size); // NOTE that last item should be equal to modulo by 3
       expect(+t4).to.be.equal(numOfEscrows);
@@ -477,9 +477,9 @@ describe("StandardEscrow", function () {
     it("should be reverted when the arguments are not properly configured", async function () {
       const { escrow, funderAccount } = await prepareMultipleEscrowCreation({ size: 10 });
       // wrong size
-      await expect(escrow.connect(funderAccount).findEscrowsAsFunderByCursor(1, 0)).to.be.reverted;
+      await expect(escrow.findEscrowsAsFunderByCursor(funderAccount.address, 1, 0)).to.be.reverted;
       // too big size
-      await expect(escrow.connect(funderAccount).findEscrowsAsFunderByCursor(1, 101)).to.be.reverted;
+      await expect(escrow.findEscrowsAsFunderByCursor(funderAccount.address, 1, 101)).to.be.reverted;
       // wrong cursor
       // CHECK: it seems like minus value cannot be passed over
       // await expect(escrow.connect(funderAccount).findEscrowsAsFunderByCursor(-1, 101)).to.be.reverted;
@@ -489,14 +489,14 @@ describe("StandardEscrow", function () {
       const numberOfEscrows = 10;
       const { escrow, funderAccount } = await prepareMultipleEscrowCreation({ size: numberOfEscrows });
       // out of range
-      const [result, total] = await escrow.connect(funderAccount).findEscrowsAsFunderByCursor(11, 10);
+      const [result, total] = await escrow.findEscrowsAsFunderByCursor(funderAccount.address, 11, 10);
       expect(result.length).to.equal(0);
       expect(+total).to.be.equal(numberOfEscrows);
     });
 
     it("should return an empty array with size zero when a corresponding array does not exist for an account", async function () {
       const { escrow, funderAccount2: noInfoAccount } = await prepareMultipleEscrowCreation({ size: 1 });
-      const [result, total] = await escrow.connect(noInfoAccount).findEscrowsAsFunderByCursor(0, 1);
+      const [result, total] = await escrow.findEscrowsAsFunderByCursor(noInfoAccount.address, 0, 1);
       expect(result.length).to.equal(0);
       expect(+total).to.be.equal(0);
     });
@@ -514,7 +514,7 @@ describe("StandardEscrow", function () {
       let size = 3;
       let cursor = (page - 1) * size;
 
-      const [escrowsOfPayee, t1] = await escrow.connect(payeeAccount).findEscrowsAsPayeeByCursor(cursor, size);
+      const [escrowsOfPayee, t1] = await escrow.findEscrowsAsPayeeByCursor(payeeAccount.address, cursor, size);
       expect(escrowsOfPayee).to.be.lengthOf(size);
       expect(+t1).to.be.equal(numOfEscrows);
       
@@ -528,7 +528,7 @@ describe("StandardEscrow", function () {
       page = 2;
       size = 3;
       cursor = (page - 1) * size;
-      const [escrowsOfPayee2, t2] = await escrow.connect(payeeAccount).findEscrowsAsPayeeByCursor(cursor, size);
+      const [escrowsOfPayee2, t2] = await escrow.findEscrowsAsPayeeByCursor(payeeAccount.address, cursor, size);
       expect(escrowsOfPayee2).to.be.lengthOf(size);
       expect(+t2).to.be.equal(numOfEscrows);
       
@@ -542,7 +542,7 @@ describe("StandardEscrow", function () {
       page = 3;
       size = 3;
       cursor = (page - 1) * size;
-      const [escrowsOfPayee3, t3] = await escrow.connect(payeeAccount).findEscrowsAsPayeeByCursor(cursor, size);
+      const [escrowsOfPayee3, t3] = await escrow.findEscrowsAsPayeeByCursor(payeeAccount.address, cursor, size);
       expect(escrowsOfPayee3).to.be.lengthOf(size);
       expect(+t3).to.be.equal(numOfEscrows);
       
@@ -556,7 +556,7 @@ describe("StandardEscrow", function () {
       page = 4;
       size = 3;
       cursor = (page - 1) * size;
-      const [escrowsOfPayee4, t4] = await escrow.connect(payeeAccount).findEscrowsAsPayeeByCursor(cursor, size);
+      const [escrowsOfPayee4, t4] = await escrow.findEscrowsAsPayeeByCursor(payeeAccount.address, cursor, size);
 
       expect(escrowsOfPayee4).to.be.lengthOf(numOfEscrows % size); // NOTE that last item should be equal to modulo by 3
       expect(+t4).to.be.equal(numOfEscrows);
@@ -571,9 +571,9 @@ describe("StandardEscrow", function () {
     it("should be reverted when the arguments are not properly configured", async function () {
       const { escrow, payeeAccount } = await prepareMultipleEscrowCreation({ size: 10 });
       // wrong size
-      await expect(escrow.connect(payeeAccount).findEscrowsAsPayeeByCursor(1, 0)).to.be.reverted;
+      await expect(escrow.findEscrowsAsPayeeByCursor(payeeAccount.address, 1, 0)).to.be.reverted;
       // too big size
-      await expect(escrow.connect(payeeAccount).findEscrowsAsPayeeByCursor(1, 101)).to.be.reverted;
+      await expect(escrow.findEscrowsAsPayeeByCursor(payeeAccount.address, 1, 101)).to.be.reverted;
       // wrong cursor
       // CHECK: it seems like minus value cannot be passed over
       // await expect(escrow.connect(payeeAccount).findEscrowsAsPayeeByCursor(-1, 101)).to.be.reverted;
@@ -583,14 +583,14 @@ describe("StandardEscrow", function () {
       const numberOfEscrows = 10;
       const { escrow, payeeAccount } = await prepareMultipleEscrowCreation({ size: numberOfEscrows });
       // out of range
-      const [result, total] = await escrow.connect(payeeAccount).findEscrowsAsPayeeByCursor(11, 10);
+      const [result, total] = await escrow.findEscrowsAsPayeeByCursor(payeeAccount.address, 11, 10);
       expect(result.length).to.equal(0);
       expect(+total).to.be.equal(numberOfEscrows);
     });
 
     it("should return an empty array with size zero when a corresponding array does not exist for an account", async function () {
       const { escrow, payeeAccount2: noInfoAccount } = await prepareMultipleEscrowCreation({ size: 1 });
-      const [result, total] = await escrow.connect(noInfoAccount).findEscrowsAsPayeeByCursor(0, 1);
+      const [result, total] = await escrow.findEscrowsAsPayeeByCursor(noInfoAccount.address, 0, 1);
       expect(result.length).to.equal(0);
       expect(+total).to.be.equal(0);
     });

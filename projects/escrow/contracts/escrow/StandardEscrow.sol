@@ -201,11 +201,11 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
      * @param cursor index from which search the array. It assumes 0 is the lastest one.
      * @param size size of the page, hard limit 100
      */
-    function findEscrowsAsFunderByCursor(uint256 cursor, uint256 size) external view returns (EscrowContract[] memory result, uint256 total) {
+    function findEscrowsAsFunderByCursor(address funder, uint256 cursor, uint256 size) external view returns (EscrowContract[] memory result, uint256 total) {
         require(cursor >= 0, "StandardEscrow: cursor must be greater than equal to 0");
         require(size > 0 && size <= 100, "StandardEscrow: size must be greater than 0");
         
-        EscrowContract[] memory escrows = _funderContracts[msg.sender];
+        EscrowContract[] memory escrows = _funderContracts[funder];
         uint256 totalLength = escrows.length;
         if (totalLength == 0) {
             return (escrows, 0);
@@ -238,11 +238,11 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
      * @param cursor index from which search the array. It assumes 0 is the lastest one
      * @param size size of the page, hard limit 100
      */
-    function findEscrowsAsPayeeByCursor(uint256 cursor, uint256 size) external view returns (EscrowContract[] memory result, uint256 total) {
+    function findEscrowsAsPayeeByCursor(address payee, uint256 cursor, uint256 size) external view returns (EscrowContract[] memory result, uint256 total) {
         require(cursor >= 0, "StandardEscrow: cursor must be greater than equal to 0");
         require(size > 0 && size <= 100, "StandardEscrow: size must be greater than 0");
         
-        EscrowContract[] memory escrows = _payeeContracts[msg.sender];
+        EscrowContract[] memory escrows = _payeeContracts[payee];
         uint256 totalLength = escrows.length;
         if (totalLength == 0) {
             return (escrows, 0);
