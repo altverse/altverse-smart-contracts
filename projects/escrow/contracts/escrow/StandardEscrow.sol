@@ -201,7 +201,7 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
      * @param cursor index from which search the array. It assumes 0 is the lastest one.
      * @param size size of the page, hard limit 100
      */
-    function findEscrowsAsFunderByCursor(uint256 cursor, uint256 size) external view returns (EscrowContract[] memory, uint256 total) {
+    function findEscrowsAsFunderByCursor(uint256 cursor, uint256 size) external view returns (EscrowContract[] memory result, uint256 total) {
         require(cursor >= 0, "StandardEscrow: cursor must be greater than equal to 0");
         require(size > 0 && size <= 100, "StandardEscrow: size must be greater than 0");
         
@@ -224,7 +224,7 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
             determinedSize = size;
         }
 
-        EscrowContract[] memory result = new EscrowContract[](determinedSize);
+        result = new EscrowContract[](determinedSize);
 
         for (uint256 i = 0; i < determinedSize; i++) {
             result[i] = escrows[offset - i];
@@ -238,7 +238,7 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
      * @param cursor index from which search the array. It assumes 0 is the lastest one
      * @param size size of the page, hard limit 100
      */
-    function findEscrowsAsPayeeByCursor(uint256 cursor, uint256 size) external view returns (EscrowContract[] memory, uint256 total) {
+    function findEscrowsAsPayeeByCursor(uint256 cursor, uint256 size) external view returns (EscrowContract[] memory result, uint256 total) {
         require(cursor >= 0, "StandardEscrow: cursor must be greater than equal to 0");
         require(size > 0 && size <= 100, "StandardEscrow: size must be greater than 0");
         
@@ -261,7 +261,7 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
             determinedSize = size;
         }
 
-        EscrowContract[] memory result = new EscrowContract[](determinedSize);
+        result = new EscrowContract[](determinedSize);
 
         for (uint256 i = 0; i < determinedSize; i++) {
             result[i] = escrows[offset - i];
