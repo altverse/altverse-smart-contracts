@@ -228,6 +228,11 @@ describe("StandardEscrow", function () {
         expect(targetEscrow.state).to.be.equal(FINALIZED);
       });
 
+      it('should not be finalized other than the funder of the escrow', async function () {
+        const { escrow, funderAccount2: maliciousActor, contractId } = await prepareEscrowActivation({});
+        await expect(escrow.connect(maliciousActor).settle(contractId, false)).to.be.reverted;
+      });
+
       it('should not transfer the funded tokens to payee yet', async function () {
         const { escrow, contractId, fakeUSDToken, payeeAccount } = await prepareEscrowSettle({ auto: false });
         const targetEscrow = await escrow.getEscrow(contractId);

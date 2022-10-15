@@ -156,6 +156,7 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
     function settle(uint256 contractId, bool autoWithdraw) external virtual {
         EscrowContract storage escrow = getEscrowSafe(contractId);
         require(escrow.state == State.ACTIVATED, "StandardEscrow: Escrow can be finalized (settled) on ACTIVATED state only");
+        require(escrow.funder == msg.sender, "StandardEscrow: Escrow can only be finalized by the funder of the escrow");
         
         _finalize(escrow);
 
