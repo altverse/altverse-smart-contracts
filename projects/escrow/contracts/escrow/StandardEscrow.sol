@@ -61,6 +61,8 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
 
     function createEscrow(string memory title, address payee_, ERC20 token_, uint256 amount_) external nonContract {
         require(amount_ > 0, "StandardEscrow: The amount must be greater than 0");
+        require(msg.sender != payee_, "StandardEscrow: The payee cannot be equal to the creator");
+        
         EscrowContract memory newContract = EscrowContract({
             id: _currentContractId,
             title: title,

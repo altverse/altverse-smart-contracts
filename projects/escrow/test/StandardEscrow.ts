@@ -161,6 +161,16 @@ describe("StandardEscrow", function () {
       const amount = 0; // NOTE HERE!
       await expect(escrow.connect(funderAccount).createEscrow("StandardEscrow", payeeAccount.address, fakeUSDToken.address, amount)).be.reverted;
     });
+
+    it("should not allow a funder to assign the payee as the same address", async function () {
+      const { funderAccount, fakeUSDToken, standardEscrow } = await loadFixture(deployEscrowFixture);
+      const escrow = await ethers.getContractAt("StandardEscrow", standardEscrow.address);
+      await fakeUSDToken.connect(funderAccount).approve(escrow.address, 1000);
+      await fakeUSDToken.transfer(funderAccount.address, 1000);
+      
+      const amount = 1000;
+      await expect(escrow.connect(funderAccount).createEscrow("StandardEscrow", funderAccount.address, fakeUSDToken.address, amount)).be.reverted;
+    });
   });
 
   describe('activateContract', async function () {
