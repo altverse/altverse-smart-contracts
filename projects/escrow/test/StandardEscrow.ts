@@ -1,9 +1,6 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
-import { ethers as eth } from "ethers";
 import { ethers } from "hardhat";
-import { ERC20FakeUSDToken, ERC20FakeUSDToken2, StandardEscrow__factory } from "../typechain-types";
 
 type EscrowCreationParam = {
   title?: string;
@@ -614,7 +611,7 @@ describe("StandardEscrow", function () {
   describe('Event Emission', function () {
     describe('Deposited', function () {
       it("should emit when a contract is created", async function () {
-        const { standardEscrow, factoryAccount, funderAccount, payeeAccount, funderAccount2, payeeAccount2, fakeUSDToken, fakeUSDToken2 } = await loadFixture(deployEscrowFixture);
+        const { standardEscrow, funderAccount, payeeAccount, fakeUSDToken } = await loadFixture(deployEscrowFixture);
         const escrow = await ethers.getContractAt("StandardEscrow", standardEscrow.address);
         await fakeUSDToken.connect(funderAccount).approve(escrow.address, 1000);
         await fakeUSDToken.transfer(funderAccount.address, 1000);
@@ -677,7 +674,7 @@ describe("StandardEscrow", function () {
     });
     describe('ContractActivated', function () {
       it('should emit when the contract is activated', async function () {
-        const { escrow, contractId, funderAccount, payeeAccount, fakeUSDToken } = await prepareEscrowCreation({});
+        const { escrow, contractId, payeeAccount } = await prepareEscrowCreation({});
         await expect(escrow.connect(payeeAccount).activateContract(contractId))
           .to.emit(escrow, "ContractActivated")
           .withArgs(contractId, payeeAccount.address);
