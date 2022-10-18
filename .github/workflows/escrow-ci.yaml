@@ -1,0 +1,26 @@
+name: Escrow CI
+
+on:
+  pull_request:
+    paths: 
+      - "projects/escrow/**"
+
+env:
+  GITHUB_SHA: ${{ github.sha }}
+  GITHUB_REF: ${{ github.ref }}
+  environment: escrow
+  
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Change Directory
+        run: cd projects/escrow
+
+      - name: Install Packages
+        run: npm i
+
+      - name: Test
+        run: npx hardhat test  
