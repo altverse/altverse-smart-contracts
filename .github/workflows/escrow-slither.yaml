@@ -1,0 +1,37 @@
+name: Escrow Audit with Slither
+
+on:
+  pull_request:
+    paths: 
+      - "projects/escrow/**.sol"
+
+env:
+  GITHUB_SHA: ${{ github.sha }}
+  GITHUB_REF: ${{ github.ref }}
+  environment: escrow
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Change Directory
+        run: cd projects/escrow
+
+      - name: Install Packages
+        run: npm i
+
+      - name: Run Slither
+        uses: crytic/slither-action@v0.2.0
+        id: slither
+        with:
+          target: 'projects/escrow/'
+          fail-on: none
+          # sarif: results.sarif
+
+      # # This should be done after [Security]-[Code scanning alerts] enabled
+      # - name: Upload SARIF file
+      #   uses: github/codeql-action/upload-sarif@v2
+      #   with:
+      #     sarif_file: ${{ steps.slither.outputs.sarif }}
