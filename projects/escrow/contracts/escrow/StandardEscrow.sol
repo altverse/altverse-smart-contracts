@@ -54,8 +54,8 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
     mapping(uint256 => EscrowContract) private _contracts;
 
     // Keep track of funders/payees' contract ids.
-    mapping(address => EscrowContract[]) private _funderContracts;
-    mapping(address => EscrowContract[]) private _payeeContracts;
+    mapping(address => uint256[]) private _funderContracts;
+    mapping(address => uint256[]) private _payeeContracts;
 
     uint256 private _currentContractId = 1;
 
@@ -77,8 +77,8 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
         });
 
         _contracts[_currentContractId] = newContract;
-        _funderContracts[msg.sender].push(newContract);
-        _payeeContracts[payee_].push(newContract);
+        _funderContracts[msg.sender].push(_currentContractId);
+        _payeeContracts[payee_].push(_currentContractId);
 
         ERC20 erc20Token = ERC20(token_);
 
@@ -208,10 +208,10 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
         require(cursor >= 0, "StandardEscrow: cursor must be greater than equal to 0");
         require(size > 0 && size <= 100, "StandardEscrow: size must be greater than 0");
         
-        EscrowContract[] memory escrows = _funderContracts[funder];
-        uint256 totalLength = escrows.length;
+        uint256[] memory contractIds = _funderContracts[funder];
+        uint256 totalLength = contractIds.length;
         if (totalLength == 0) {
-            return (escrows, 0);
+            return (new EscrowContract[](0), 0);
         }
 
         if (totalLength - 1 < cursor) {
@@ -230,7 +230,7 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
         result = new EscrowContract[](determinedSize);
 
         for (uint256 i = 0; i < determinedSize; i++) {
-            result[i] = escrows[offset - i];
+            result[i] = getEscrow(contractIds[offset - i]);
         }
 
         return (result, totalLength);
@@ -245,10 +245,10 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
         require(cursor >= 0, "StandardEscrow: cursor must be greater than equal to 0");
         require(size > 0 && size <= 100, "StandardEscrow: size must be greater than 0");
         
-        EscrowContract[] memory escrows = _payeeContracts[payee];
-        uint256 totalLength = escrows.length;
+        uint256[] memory contractIds = _payeeContracts[payee];
+        uint256 totalLength = contractIds.length;
         if (totalLength == 0) {
-            return (escrows, 0);
+            return (new EscrowContract[](0), 0);
         }
 
         if (totalLength - 1 < cursor) {
@@ -267,7 +267,7 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
         result = new EscrowContract[](determinedSize);
 
         for (uint256 i = 0; i < determinedSize; i++) {
-            result[i] = escrows[offset - i];
+            result[i] =  getEscrow(contractIds[offset - i]);
         }
 
         return (result, totalLength);
