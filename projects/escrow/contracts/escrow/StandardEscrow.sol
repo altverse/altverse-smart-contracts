@@ -9,6 +9,9 @@ import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+
 import "./ArbitrableEscrowFactory.sol";
 import "./EscrowMetadata.sol";
 
@@ -17,12 +20,13 @@ import "./EscrowMetadata.sol";
  * @dev Base escrow contract, holds funds designated for a payee until they
  * withdraw them.
  */
-contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
+contract StandardEscrow is ReentrancyGuard, EscrowMetadata, Ownable {
+    using SafeMath for uint256;
     using SafeERC20 for ERC20;
     using Address for address payable;
 
     event Deposited(uint256 contractId, address indexed funder, ERC20 erc20Token, uint256 amount);
-    event Withdrawn(uint256 contractId, address indexed actor, address indexed recipient, ERC20 erc20Token, uint256 amount);
+    event Withdrawn(uint256 contractId, address indexed actor, address indexed recipient, ERC20 erc20Token, uint256 amount, uint256 fee);
     event ContractActivated(uint256 contractId, address indexed payee);
     event ContractFinalized(uint256 contractId, address indexed funder);
 
@@ -58,6 +62,23 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
     mapping(address => uint256[]) private _payeeContracts;
 
     uint256 private _currentContractId = 1;
+
+    address private _treasury;
+    uint256 private _withdrawFee = 0;   // 1 = 0.01%, 10 = 0.1%, 100 = 1%
+
+    constructor(address treasury_, uint256 withdrawFee_) {
+        _treasury = treasury_;
+        _withdrawFee = withdrawFee_;
+    }
+
+    function updateTreasury(address newTreasury) public onlyOwner {
+        _treasury = newTreasury;
+    }
+
+    function updateWithdrawFee(uint256 newWithdrawFee) public onlyOwner {
+        require(newWithdrawFee > 0 || newWithdrawFee < 10000, "StandardEscrow: The amount must be greater than 0 and less than 10000 (100%)");
+        _withdrawFee = newWithdrawFee;
+    }
 
     function createEscrow(string memory title, address payee_, ERC20 token_, uint256 amount_) external nonContract {
         require(amount_ > 0, "StandardEscrow: The amount must be greater than 0");
@@ -100,8 +121,13 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
     function withdraw(uint256 contractId, uint256 amount) external virtual nonContract nonReentrant {
         EscrowContract storage escrow = getEscrowSafe(contractId);
         require(withdrawalAllowed(escrow, msg.sender, amount), "StandardEscrow: Cannot withdraw on current state");
-
-        _withdraw(escrow, msg.sender, amount);
+        
+        if (escrow.payee == msg.sender) {
+            _withdrawWithFee(escrow, msg.sender, amount);
+        }
+        else {
+            _withdraw(escrow, msg.sender, amount);
+        }
     }
 
     function deposit(uint256 contractId, ERC20 token_, uint256 amount_) external virtual nonContract nonReentrant {
@@ -130,7 +156,23 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
     function _withdraw(EscrowContract storage escrow, address to, uint256 amount) private {
         SafeERC20.safeTransfer(escrow.token, to, amount);
         escrow.balance -= amount;
-        emit Withdrawn(escrow.id, msg.sender, to, escrow.token, amount);
+        emit Withdrawn(escrow.id, msg.sender, to, escrow.token, amount, _withdrawFee);
+    }
+
+    function _withdrawWithFee(EscrowContract storage escrow, address to, uint256 amount) private {
+        uint256 amountOfWithdrawFee = 0;
+
+        // Send fees to treasury if exist 
+        if (_withdrawFee > 0) {
+            amountOfWithdrawFee = amount.mul(_withdrawFee).div(10000);
+            SafeERC20.safeTransfer(escrow.token, _treasury, amountOfWithdrawFee);
+        }
+        
+        uint256 amountToWithdraw = amount.sub(amountOfWithdrawFee);
+
+        SafeERC20.safeTransfer(escrow.token, to, amountToWithdraw);
+        escrow.balance -= amount;
+        emit Withdrawn(escrow.id, msg.sender, to, escrow.token, amountToWithdraw, _withdrawFee);
     }
 
     function activateContract(uint256 contractId) external virtual {
@@ -163,7 +205,7 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata {
         _finalize(escrow);
 
         if (autoWithdraw) {
-            _withdraw(escrow, escrow.payee, escrow.balance);
+            _withdrawWithFee(escrow, escrow.payee, escrow.balance);
         }
     }
 

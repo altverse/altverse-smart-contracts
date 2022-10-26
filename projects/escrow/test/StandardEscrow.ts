@@ -22,10 +22,10 @@ describe("StandardEscrow", function () {
 
   async function deployEscrowFixture() {
     // Contracts are deployed using the first signer/account by default
-    const [factoryAccount, funderAccount, payeeAccount, funderAccount2, payeeAccount2] = await ethers.getSigners();
+    const [factoryAccount, funderAccount, payeeAccount, funderAccount2, payeeAccount2, treasuryAccount] = await ethers.getSigners();
 
     const StandardEscrow = await ethers.getContractFactory("StandardEscrow");
-    const standardEscrow = await StandardEscrow.deploy();
+    const standardEscrow = await StandardEscrow.deploy(treasuryAccount.address, 0);
     await standardEscrow.deployed();
 
     const FakeUSDToken = await ethers.getContractFactory("ERC20FakeUSDToken");
@@ -38,11 +38,11 @@ describe("StandardEscrow", function () {
 
     await fakeUSDToken2.deployed();
 
-    return { standardEscrow, factoryAccount, funderAccount, payeeAccount, funderAccount2, payeeAccount2, fakeUSDToken, fakeUSDToken2 };
+    return { standardEscrow, factoryAccount, funderAccount, payeeAccount, funderAccount2, payeeAccount2, treasuryAccount, fakeUSDToken, fakeUSDToken2 };
   }
 
   async function prepareEscrowCreation({ title = "TestTitle", amount = 1000, approve, mint }: EscrowCreationParam) {
-    const { standardEscrow, factoryAccount, funderAccount, payeeAccount, funderAccount2, payeeAccount2, fakeUSDToken, fakeUSDToken2 } = await loadFixture(deployEscrowFixture);
+    const { standardEscrow, factoryAccount, funderAccount, payeeAccount, funderAccount2, payeeAccount2, treasuryAccount, fakeUSDToken, fakeUSDToken2 } = await loadFixture(deployEscrowFixture);
     const escrow = await ethers.getContractAt("StandardEscrow", standardEscrow.address);
     await fakeUSDToken.connect(funderAccount).approve(escrow.address, approve ?? amount);
     await fakeUSDToken.transfer(funderAccount.address, mint ?? amount);
@@ -55,11 +55,11 @@ describe("StandardEscrow", function () {
     });
     const contractId = event?.args?.contractId;
 
-    return { escrow, contractId, standardEscrow, factoryAccount, funderAccount, payeeAccount, funderAccount2, payeeAccount2, fakeUSDToken, fakeUSDToken2 };
+    return { escrow, contractId, standardEscrow, factoryAccount, funderAccount, payeeAccount, funderAccount2, payeeAccount2, treasuryAccount, fakeUSDToken, fakeUSDToken2 };
   }
 
   async function prepareMultipleEscrowCreation({ title = "TestTitle", amount = 1000, size = 5 }: { title?: string; amount?: number; size?: number }) {
-    const { standardEscrow, factoryAccount, funderAccount, payeeAccount, funderAccount2, payeeAccount2, fakeUSDToken, fakeUSDToken2 } = await loadFixture(deployEscrowFixture);
+    const { standardEscrow, factoryAccount, funderAccount, payeeAccount, funderAccount2, payeeAccount2, treasuryAccount, fakeUSDToken, fakeUSDToken2 } = await loadFixture(deployEscrowFixture);
     const escrow = await ethers.getContractAt("StandardEscrow", standardEscrow.address);
 
     await fakeUSDToken.connect(funderAccount).approve(escrow.address, amount * size);
@@ -79,21 +79,23 @@ describe("StandardEscrow", function () {
       contractIds.push(contractId);
     }
 
-    return { escrow, contractIds, standardEscrow, factoryAccount, funderAccount, payeeAccount, funderAccount2, payeeAccount2, fakeUSDToken, fakeUSDToken2 };
+    return { escrow, contractIds, standardEscrow, factoryAccount, funderAccount, payeeAccount, funderAccount2, payeeAccount2, treasuryAccount, fakeUSDToken, fakeUSDToken2 };
   }
 
   async function prepareEscrowActivation(params: EscrowActivationParam) {
-    const { escrow, contractId, standardEscrow, factoryAccount, funderAccount, payeeAccount, funderAccount2, payeeAccount2, fakeUSDToken, fakeUSDToken2 } = await prepareEscrowCreation(params);
+    const { escrow, contractId, standardEscrow, factoryAccount, funderAccount, payeeAccount, funderAccount2, payeeAccount2, treasuryAccount, fakeUSDToken, fakeUSDToken2 } =
+      await prepareEscrowCreation(params);
     const tx = await escrow.connect(payeeAccount).activateContract(contractId);
     await tx.wait();
-    return { escrow, contractId, standardEscrow, factoryAccount, funderAccount, payeeAccount, funderAccount2, payeeAccount2, fakeUSDToken, fakeUSDToken2 };
+    return { escrow, contractId, standardEscrow, factoryAccount, funderAccount, payeeAccount, funderAccount2, payeeAccount2, fakeUSDToken, treasuryAccount, fakeUSDToken2 };
   }
 
   async function prepareEscrowSettle(params: EscrowFinalizationParam) {
-    const { escrow, contractId, standardEscrow, factoryAccount, funderAccount, payeeAccount, funderAccount2, payeeAccount2, fakeUSDToken, fakeUSDToken2 } = await prepareEscrowActivation(params);
+    const { escrow, contractId, standardEscrow, factoryAccount, funderAccount, payeeAccount, funderAccount2, payeeAccount2, treasuryAccount, fakeUSDToken, fakeUSDToken2 } =
+      await prepareEscrowActivation(params);
     const tx = await escrow.connect(funderAccount).settle(contractId, params.auto);
     await tx.wait();
-    return { escrow, contractId, standardEscrow, factoryAccount, funderAccount, payeeAccount, funderAccount2, payeeAccount2, fakeUSDToken, fakeUSDToken2 };
+    return { escrow, contractId, standardEscrow, factoryAccount, funderAccount, payeeAccount, funderAccount2, payeeAccount2, treasuryAccount, fakeUSDToken, fakeUSDToken2 };
   }
 
   it("Deployed", async function () {
@@ -643,17 +645,21 @@ describe("StandardEscrow", function () {
         const { escrow, contractId, funderAccount, fakeUSDToken } = await prepareEscrowCreation({ approve: 2000, mint: 2000, amount: 1000 });
         await expect(escrow.connect(funderAccount).withdraw(contractId, 1000))
           .to.emit(escrow, "Withdrawn")
-          .withArgs(contractId, funderAccount.address, funderAccount.address, fakeUSDToken.address, 1000);
+          .withArgs(contractId, funderAccount.address, funderAccount.address, fakeUSDToken.address, 1000, 0);
       });
 
       it("should emit when a withdrawal by the payee is made after finalized", async function () {
         const { escrow, contractId, payeeAccount, fakeUSDToken } = await prepareEscrowSettle({ approve: 2000, mint: 2000, amount: 1000, auto: false });
-        await expect(escrow.connect(payeeAccount).withdraw(contractId, 1000)).to.emit(escrow, "Withdrawn").withArgs(contractId, payeeAccount.address, payeeAccount.address, fakeUSDToken.address, 1000);
+        await expect(escrow.connect(payeeAccount).withdraw(contractId, 1000))
+          .to.emit(escrow, "Withdrawn")
+          .withArgs(contractId, payeeAccount.address, payeeAccount.address, fakeUSDToken.address, 1000, 0);
       });
 
       it("should emit when the contract is settled with autowithdraw=true by the funder", async function () {
         const { escrow, contractId, funderAccount, payeeAccount, fakeUSDToken } = await prepareEscrowActivation({});
-        await expect(escrow.connect(funderAccount).settle(contractId, true)).to.emit(escrow, "Withdrawn").withArgs(contractId, funderAccount.address, payeeAccount.address, fakeUSDToken.address, 1000);
+        await expect(escrow.connect(funderAccount).settle(contractId, true))
+          .to.emit(escrow, "Withdrawn")
+          .withArgs(contractId, funderAccount.address, payeeAccount.address, fakeUSDToken.address, 1000, 0);
       });
     });
     describe("ContractActivated", function () {
@@ -683,6 +689,24 @@ describe("StandardEscrow", function () {
 
       const [result2, __] = await escrow.findEscrowsAsPayeeByCursor(payeeAccount.address, 0, 1);
       expect(result2[0][1]).to.equal(expectingState);
+    });
+  });
+
+  describe("Withdraw Fee", function () {
+    it("should be charged for payee withdrawal", async function () {
+      // Create Escrow with 1000 deposits.
+      const { escrow, contractId, factoryAccount, funderAccount, payeeAccount, treasuryAccount, fakeUSDToken } = await prepareEscrowActivation({ approve: 20000000, mint: 20000000, amount: 10000000 });
+
+      const fee = 1; // 1%
+      await escrow.connect(factoryAccount).updateWithdrawFee(fee * 100); // 100 = 1%
+
+      await escrow.connect(funderAccount).settle(contractId, true);
+
+      const balanceOfPayee = await fakeUSDToken.balanceOf(payeeAccount.address);
+      expect(+balanceOfPayee, `balance of the payee should be 99 since the fee has been deducted`).to.be.equal(9900000);
+
+      const balanceOfTreasury = await fakeUSDToken.balanceOf(treasuryAccount.address);
+      expect(+balanceOfTreasury, `balance of the treasury should be 1 since the fee has been charged`).to.be.equal(100000);
     });
   });
 });
