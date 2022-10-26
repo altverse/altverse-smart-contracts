@@ -11,6 +11,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 
 import "./ArbitrableEscrowFactory.sol";
 import "./EscrowMetadata.sol";
@@ -20,7 +21,7 @@ import "./EscrowMetadata.sol";
  * @dev Base escrow contract, holds funds designated for a payee until they
  * withdraw them.
  */
-contract StandardEscrow is ReentrancyGuard, EscrowMetadata, Ownable {
+contract StandardEscrow is ReentrancyGuard, EscrowMetadata, Ownable, Pausable {
     using SafeMath for uint256;
     using SafeERC20 for ERC20;
     using Address for address payable;
@@ -80,7 +81,7 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata, Ownable {
         _withdrawFee = newWithdrawFee;
     }
 
-    function createEscrow(string memory title, address payee_, ERC20 token_, uint256 amount_) external nonContract {
+    function createEscrow(string memory title, address payee_, ERC20 token_, uint256 amount_) external nonContract whenNotPaused {
         require(amount_ > 0, "StandardEscrow: The amount must be greater than 0");
         require(msg.sender != payee_, "StandardEscrow: The payee cannot be equal to the creator");
         
@@ -118,7 +119,7 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata, Ownable {
      *
      * Emits a {Withdrawn} event.
      */
-    function withdraw(uint256 contractId, uint256 amount) external virtual nonContract nonReentrant {
+    function withdraw(uint256 contractId, uint256 amount) external virtual nonContract nonReentrant whenNotPaused {
         EscrowContract storage escrow = getEscrowSafe(contractId);
         require(withdrawalAllowed(escrow, msg.sender, amount), "StandardEscrow: Cannot withdraw on current state");
         
@@ -130,7 +131,7 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata, Ownable {
         }
     }
 
-    function deposit(uint256 contractId, ERC20 token_, uint256 amount_) external virtual nonContract nonReentrant {
+    function deposit(uint256 contractId, ERC20 token_, uint256 amount_) external virtual nonContract nonReentrant whenNotPaused {
         EscrowContract storage escrow = getEscrowSafe(contractId);
         require(escrow.state != State.FINALIZED, "StandardEscrow: deposit is possible before finalization");
         require(escrow.funder == msg.sender, "StandardEscrow: The funder does not match");
