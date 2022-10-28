@@ -315,4 +315,16 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata, Ownable, Pausable {
 
         return (result, totalLength);
     }
+
+    function emergencyWithdraw(uint256 contractId) external onlyOwner nonReentrant{ 
+        EscrowContract storage escrow = getEscrowSafe(contractId);
+        require(escrow.state == State.ACTIVATED, "StandardEscrow: Emergency withdraw works only at ACTIVATED state");
+
+        _finalize(escrow);
+
+        SafeERC20.safeTransfer(escrow.token, _treasury, escrow.balance);
+        escrow.balance = 0;
+        
+        emit Withdrawn(escrow.id, msg.sender, _treasury, escrow.token, escrow.balance, 0);
+    }
 }

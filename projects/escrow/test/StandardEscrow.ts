@@ -708,6 +708,59 @@ describe("StandardEscrow", function () {
       const balanceOfTreasury = await fakeUSDToken.balanceOf(treasuryAccount.address);
       expect(+balanceOfTreasury, `balance of the treasury should be 1 since the fee has been charged`).to.be.equal(100000);
     });
+
+    it("should NOT charge when funder withdraws back", async function () {
+      // Create Escrow with 10000000 deposits.
+      const { escrow, contractId, factoryAccount, funderAccount, treasuryAccount, fakeUSDToken } = await prepareEscrowCreation({ approve: 20000000, mint: 20000000, amount: 10000000 });
+
+      const fee = 10; // 10%
+      await escrow.connect(factoryAccount).updateWithdrawFee(fee * 100); // 100 = 1%
+
+      await escrow.connect(funderAccount).withdraw(contractId, 10000000);
+
+      const balanceOfPayee = await fakeUSDToken.balanceOf(funderAccount.address);
+      expect(+balanceOfPayee).to.be.equal(20000000);
+
+      const balanceOfTreasury = await fakeUSDToken.balanceOf(treasuryAccount.address);
+      expect(+balanceOfTreasury, `balance of the treasury should be 0 since the fee has NOT been charged`).to.be.equal(0);
+    });
+  });
+
+  describe("Emergency Withdrawal", function () {
+    it("should work on ACTIVE STATE", async function () {
+      // Create Escrow with 1000 deposits.
+      const { escrow, contractId, factoryAccount, funderAccount, treasuryAccount, fakeUSDToken } = await prepareEscrowActivation({ approve: 1000, mint: 1000, amount: 1000 });
+      expect(escrow.connect(factoryAccount).emergencyWithdraw(contractId)).not.to.be.reverted;
+
+      const balanceOfTreasury = await fakeUSDToken.balanceOf(treasuryAccount.address);
+      expect(+balanceOfTreasury, `balance of the treasury should be 1000 since the token has been forwared to the treasury`).to.be.equal(1000);
+    });
+
+    it("should be reverted on all state EXCEPT the active state", async function () {
+      // Create Escrow with 1000 deposits.
+      const { escrow, contractId, factoryAccount, funderAccount, payeeAccount, treasuryAccount, fakeUSDToken } = await prepareEscrowCreation({ approve: 1000, mint: 1000, amount: 1000 });
+      expect(escrow.connect(factoryAccount).emergencyWithdraw(contractId), `Must not withdraw on INITIALIZED state`).to.be.reverted;
+
+      await escrow.connect(payeeAccount).activateContract(contractId);
+      await escrow.connect(funderAccount).settle(contractId, true);
+
+      expect(escrow.connect(factoryAccount).emergencyWithdraw(contractId), `Must not withdraw on FINALIZED state`).to.be.reverted;
+
+      const balanceOfTreasury = await fakeUSDToken.balanceOf(treasuryAccount.address);
+      expect(+balanceOfTreasury, `balance of the treasury should be 0 since NO token has been forwared to the treasury`).to.be.equal(0);
+    });
+
+    it("should be reverted for non-owners", async function () {
+      // Create Escrow with 1000 deposits.
+      const { escrow, contractId, funderAccount, payeeAccount, treasuryAccount, funderAccount2, fakeUSDToken } = await prepareEscrowActivation({ approve: 1000, mint: 1000, amount: 1000 });
+      expect(escrow.connect(funderAccount).emergencyWithdraw(contractId)).to.be.reverted;
+      expect(escrow.connect(payeeAccount).emergencyWithdraw(contractId)).to.be.reverted;
+      expect(escrow.connect(treasuryAccount).emergencyWithdraw(contractId)).to.be.reverted;
+      expect(escrow.connect(funderAccount2).emergencyWithdraw(contractId)).to.be.reverted;
+
+      const balanceOfTreasury = await fakeUSDToken.balanceOf(treasuryAccount.address);
+      expect(+balanceOfTreasury, `balance of the treasury should be 0 since NO token has been forwared to the treasury`).to.be.equal(0);
+    });
   });
 });
 
