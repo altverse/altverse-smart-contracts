@@ -149,9 +149,9 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata, Ownable, Pausable {
     }
 
     function withdrawalAllowed(EscrowContract memory escrow, address actor, uint256 amount) public view virtual returns (bool) {
-        return (escrow.state == State.INITIALIZED && escrow.funder == actor)
-          || (escrow.state == State.FINALIZED && escrow.payee == actor)
-          || escrow.balance >= amount;
+        return ((escrow.state == State.INITIALIZED && escrow.funder == actor)
+          || (escrow.state == State.FINALIZED && escrow.payee == actor))
+          && escrow.balance >= amount;
     }
 
     function _withdraw(EscrowContract storage escrow, address to, uint256 amount) private {
@@ -318,7 +318,7 @@ contract StandardEscrow is ReentrancyGuard, EscrowMetadata, Ownable, Pausable {
 
     function emergencyWithdraw(uint256 contractId) external onlyOwner nonReentrant{ 
         EscrowContract storage escrow = getEscrowSafe(contractId);
-        require(escrow.state == State.ACTIVATED, "StandardEscrow: Emergency withdraw works only at ACTIVATED state");
+        require(escrow.state >= State.ACTIVATED, "StandardEscrow: Emergency withdraw works after ACTIVATED state");
 
         _finalize(escrow);
 

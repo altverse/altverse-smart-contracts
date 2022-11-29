@@ -420,6 +420,54 @@ describe("StandardEscrow", function () {
         expect(+targetEscrowAfterWithdrawal.balance).to.be.equal(amount - paritalAmount);
       });
     });
+
+    describe("withdrawal Allowance", async function () {
+      it("should be withdrawable to funder on INITIALIZED state", async function () {
+        const amount = 1000;
+        const { escrow, contractId, funderAccount } = await prepareEscrowCreation({ amount });
+        await expect(escrow.connect(funderAccount).withdraw(contractId, amount)).not.be.reverted;
+      });
+
+      it("should NOT be withdrawable to any other than the funder on INITIALIZED state", async function () {
+        const amount = 1000;
+        const { escrow, contractId, payeeAccount, funderAccount2, payeeAccount2, treasuryAccount } = await prepareEscrowCreation({ approve: 2000, mint: 2000, amount });
+        await expect(escrow.connect(payeeAccount).withdraw(contractId, amount)).to.be.revertedWith("StandardEscrow: Cannot withdraw on current state");
+        await expect(escrow.connect(payeeAccount2).withdraw(contractId, amount)).to.be.revertedWith("StandardEscrow: Cannot withdraw on current state");
+        await expect(escrow.connect(funderAccount2).withdraw(contractId, amount)).to.be.revertedWith("StandardEscrow: Cannot withdraw on current state");
+        await expect(escrow.connect(treasuryAccount).withdraw(contractId, amount)).to.be.revertedWith("StandardEscrow: Cannot withdraw on current state");
+      });
+
+      it("should NOT be withdrawable to anyone on ACTIVATED state", async function () {
+        const amount = 1000;
+        const { escrow, contractId, payeeAccount, funderAccount, funderAccount2, payeeAccount2, treasuryAccount } = await prepareEscrowActivation({ approve: 2000, mint: 2000, amount });
+        await expect(escrow.connect(payeeAccount).withdraw(contractId, amount)).to.be.revertedWith("StandardEscrow: Cannot withdraw on current state");
+        await expect(escrow.connect(payeeAccount2).withdraw(contractId, amount)).to.be.revertedWith("StandardEscrow: Cannot withdraw on current state");
+        await expect(escrow.connect(funderAccount).withdraw(contractId, amount)).to.be.revertedWith("StandardEscrow: Cannot withdraw on current state");
+        await expect(escrow.connect(funderAccount2).withdraw(contractId, amount)).to.be.revertedWith("StandardEscrow: Cannot withdraw on current state");
+        await expect(escrow.connect(treasuryAccount).withdraw(contractId, amount)).to.be.revertedWith("StandardEscrow: Cannot withdraw on current state");
+      });
+
+      it("should be withdrawable to payee on FINALIZED state (only with autoWithdraw=false)", async function () {
+        const amount = 1000;
+        const { escrow, contractId, payeeAccount } = await prepareEscrowSettle({ approve: 2000, mint: 2000, amount, auto: false });
+        await expect(escrow.connect(payeeAccount).withdraw(contractId, amount)).not.be.reverted;
+      });
+
+      it("should NOT be withdrawable to payee on FINALIZED state IF autoWithdraw set to true (= no Balance)", async function () {
+        const amount = 1000;
+        const { escrow, contractId, payeeAccount } = await prepareEscrowSettle({ approve: 2000, mint: 2000, amount, auto: true });
+        await expect(escrow.connect(payeeAccount).withdraw(contractId, amount)).to.be.revertedWith("StandardEscrow: Cannot withdraw on current state");
+      });
+
+      it("should NOT be withdrawable to any other than the payee on FINALIZED state", async function () {
+        const amount = 1000;
+        const { escrow, contractId, funderAccount, funderAccount2, payeeAccount2, treasuryAccount } = await prepareEscrowSettle({ approve: 2000, mint: 2000, amount, auto: true });
+        await expect(escrow.connect(funderAccount).withdraw(contractId, amount)).to.be.revertedWith("StandardEscrow: Cannot withdraw on current state");
+        await expect(escrow.connect(funderAccount2).withdraw(contractId, amount)).to.be.revertedWith("StandardEscrow: Cannot withdraw on current state");
+        await expect(escrow.connect(payeeAccount2).withdraw(contractId, amount)).to.be.revertedWith("StandardEscrow: Cannot withdraw on current state");
+        await expect(escrow.connect(treasuryAccount).withdraw(contractId, amount)).to.be.revertedWith("StandardEscrow: Cannot withdraw on current state");
+      });
+    });
   });
 
   describe("findEscrowsAsFunder", async function () {
