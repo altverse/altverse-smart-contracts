@@ -10,6 +10,9 @@ contract AltNFT is ERC1155LazyMint {
     // Mapping from tokenId to minter address
     mapping(uint256 => address) public tokenIdToMinter;
 
+    // Mapping from minter address to array of tokenIds minted
+    mapping(address => uint256[]) public minterToTokenIds;
+
     constructor(
         string memory _name,
         string memory _symbol,
@@ -26,6 +29,10 @@ contract AltNFT is ERC1155LazyMint {
         tokenIdToMinter[tokenId] = minter;
     }
 
+    function getTokenIdsByMinter(address minter) public view returns (uint256[] memory) {
+        return minterToTokenIds[minter];
+    }
+
     function lazyMint(
         uint256 _amount,
         string calldata _baseURIForTokens,
@@ -34,9 +41,15 @@ contract AltNFT is ERC1155LazyMint {
         batchId = super.lazyMint(_amount, _baseURIForTokens, _data);
         uint256 startId = nextTokenIdToLazyMint - _amount;
         for (uint256 i = 0; i < _amount; i++) {
-            setTokenMinter(startId + i, msg.sender);
+            uint256 tokenId = startId + i;
+            setTokenMinter(tokenId, msg.sender);
+            minterToTokenIds[msg.sender].push(tokenId);
         }
         return batchId;
+    }
+
+    function _canLazyMint() internal view virtual override returns (bool) {
+        return true;
     }
 
     function verifyClaim(
