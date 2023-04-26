@@ -108,6 +108,8 @@ contract AltNFT is ERC1155LazyMint, SignatureMintERC1155, PrimarySale, PlatformF
         if (_req.tokenId == type(uint256).max) {
             _setTokenURI(tokenIdToMint, _req.uri);
         }
+        
+        verifyClaim(receiver, tokenIdToMint, _req.quantity);
 
         // Mint tokens.
         _mint(receiver, tokenIdToMint, _req.quantity, "");
