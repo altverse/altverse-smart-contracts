@@ -28,7 +28,10 @@
     "typescript": "^5.0.4"
   },
   "dependencies": {
+    "@openzeppelin/contracts": "^4.8.3",
+    "@openzeppelin/contracts-upgradeable": "^4.8.3",
     "@thirdweb-dev/contracts": "^3",
+    "@uniswap/v3-periphery": "^1.4.3",
     "dotenv": "^16.0.3"
   }
 }
