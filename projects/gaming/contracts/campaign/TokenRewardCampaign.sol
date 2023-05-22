@@ -3,21 +3,27 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./RandomNumber.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
 
-contract TokenRewardCampaign is Ownable {
+contract TokenRewardCampaign is Ownable, ReentrancyGuard {
+    using SafeMath for uint256;
+
     enum CampaignType { FCFS, Raffle }
     CampaignType public campaignType;
 
+    address governer;
+    mapping(address => uint256) nonces;
+
     // State variables
     ERC20 public rewardToken;
-    uint256 public goal;
     bool public started;
     bool public finished;
     uint256 public totalParticipants;
     
     // RandomNumber public randomNumberContract;
-    mapping(uint256 => address) public raffleWinners;
+    //mapping(uint256 => address) public raffleWinners;
     mapping(address => bool) public hasClaimedRaffleReward;
 
     // For FCFS
@@ -48,14 +54,15 @@ contract TokenRewardCampaign is Ownable {
         _;
     }
 
-    constructor(address _owner, address _rewardToken, uint256 _goal, uint256 _rewardPerUser, CampaignType _campaignType) {
+    constructor(address _owner, address _rewardToken, uint256 _amount, uint256 _rewardSeats, CampaignType _campaignType, address _governer) {
         transferOwnership(_owner);
+
         rewardToken = ERC20(_rewardToken);
-        goal = _goal;
-        rewardPerUser = _rewardPerUser;
+        rewardPerUser = _amount.div(_rewardSeats);
         started = false;
         finished = false;
         campaignType = _campaignType;
+        governer = _governer;
     }
 
     // Function to start a campaign
@@ -76,17 +83,55 @@ contract TokenRewardCampaign is Ownable {
     }
 
     // Function to withdraw funds by the owner
-    function withdrawFunds() public onlyOwner whenNotStarted{
+    function withdrawFunds() public onlyOwner whenNotStarted nonReentrant {
         uint256 balance = rewardToken.balanceOf(address(this));
         require(balance > 0, "No funds to withdraw");
 
-        rewardToken.transfer(owner, balance);
+        rewardToken.transfer(owner(), balance);
+    }
+
+    function getMessageDigest(address user, uint256 nonce) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(user, nonce));
+    }
+
+    function recoverSigner(bytes32 message, bytes memory sig) internal pure returns (address) {
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+
+        if (sig.length != 65) {
+            return (address(0));
+        }
+
+        assembly {
+            r := mload(add(sig, 0x20))
+            s := mload(add(sig, 0x40))
+            v := byte(0, mload(add(sig, 0x60)))
+        }
+
+        if (v < 27) {
+            v += 27;
+        }
+
+        if (v != 27 && v != 28) {
+            return (address(0));
+        } else {
+            return ecrecover(message, v, r, s);
+        }
     }
 
     // Function to participate in a campaign
-    function participate() public whenStarted {
+    function participate(uint256 nonce, bytes memory signature) public whenStarted nonReentrant {
         require(!finished, "Campaign finished");
         require(!isParticipant[msg.sender], "Already participated");
+
+        bytes32 messageDigest = getMessageDigest(msg.sender, nonce);
+        address recoveredAddress = recoverSigner(messageDigest, signature);
+        
+        require(recoveredAddress == governer, "Invalid signature");
+        require(nonce > nonces[msg.sender], "Nonce must be higher than before");
+
+        nonces[msg.sender] = nonce;
 
         totalParticipants += 1;
         participants.push(msg.sender);
@@ -128,10 +173,14 @@ contract TokenRewardCampaign is Ownable {
     }
 
     // Function to claim reward for Raffle
-    function claimRaffleReward() public onlyRaffle returns (bool won) {
+    function claimRaffleReward() public onlyRaffle nonReentrant returns (bool won) {
         require(finished, "Campaign not finished");
         require(isParticipant[msg.sender], "Not a participant");
         require(!hasClaimedRaffleReward[msg.sender], "Reward already claimed");
+
+        uint256 rewardBalance = rewardToken.balanceOf(address(this));
+        if (rewardBalance < rewardPerUser) finished = true;
+
         require(rewardToken.balanceOf(address(this)) >= rewardPerUser, "Not enough rewards left");
         
         hasClaimedRaffleReward[msg.sender] = true;
@@ -151,7 +200,6 @@ contract TokenRewardCampaign is Ownable {
 
         // Check if the user is a winner
         if (msg.sender == winner) {
-            raffleWinners[campaignID] = winner;
             rewardToken.transfer(msg.sender, rewardPerUser);
             emit RewardClaimed(msg.sender, rewardPerUser);
 

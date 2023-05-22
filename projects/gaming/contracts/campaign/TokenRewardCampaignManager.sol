@@ -15,8 +15,8 @@ contract TokenRewardCampaignManager is Ownable {
     event CampaignCreated(address campaign);
     event CampaignApproved(address campaign);
     event CampaignDisapproved(address campaign);
-    event CampaignStopped(address campaign);
-    event CampaignResumed(address campaign);
+    // event CampaignStopped(address campaign);
+    // event CampaignResumed(address campaign);
 
     modifier onlyCampaignOwner(address campaignAddress) {
         TokenRewardCampaign targetCampaign = TokenRewardCampaign(campaignAddress);
@@ -26,8 +26,8 @@ contract TokenRewardCampaignManager is Ownable {
     }
 
     // Function to create a new campaign
-    function createCampaign(address _rewardToken, uint256 _rewardAmount, uint256 _goal, uint256 _rewardPerUser, TokenRewardCampaign.CampaignType _campaignType) public {
-        TokenRewardCampaign newCampaign = new TokenRewardCampaign(msg.sender, _rewardToken, _goal, _rewardPerUser, _campaignType);
+    function createCampaign(address _rewardToken, uint256 _rewardAmount, uint256 _rewardSeats, TokenRewardCampaign.CampaignType _campaignType) public {
+        TokenRewardCampaign newCampaign = new TokenRewardCampaign(msg.sender, _rewardToken, _rewardAmount, _rewardSeats, _campaignType, address(this));
         campaigns.push(newCampaign);
         isCampaign[address(newCampaign)] = true;
 
