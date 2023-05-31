@@ -13,18 +13,19 @@ contract TokenRewardCampaign is Ownable, ReentrancyGuard {
     enum CampaignType { FCFS, Raffle }
     CampaignType public campaignType;
 
-    address governer;
     mapping(address => uint256) nonces;
+
+    address governer;
 
     // State variables
     ERC20 public rewardToken;
     bool public started;
     bool public finished;
     uint256 public totalParticipants;
-    
-    // RandomNumber public randomNumberContract;
-    //mapping(uint256 => address) public raffleWinners;
+
     mapping(address => bool) public hasClaimedRaffleReward;
+
+    uint256 public rewardSeats;
 
     // For FCFS
     uint256 public rewardPerUser;
@@ -32,6 +33,7 @@ contract TokenRewardCampaign is Ownable, ReentrancyGuard {
     // For Raffle
     address[] public participants;
     mapping(address => bool) public isParticipant;
+    address[] public winners;
 
     // Events
     event CampaignStarted();
@@ -41,6 +43,11 @@ contract TokenRewardCampaign is Ownable, ReentrancyGuard {
 
     modifier onlyRaffle {
         require(campaignType == CampaignType.Raffle, "Not a raffle campaign");
+        _;
+    }
+
+    modifier onlyAdmins {
+        require(msg.sender == owner() || msg.sender == governer, "Not admins");
         _;
     }
 
@@ -59,6 +66,7 @@ contract TokenRewardCampaign is Ownable, ReentrancyGuard {
 
         rewardToken = ERC20(_rewardToken);
         rewardPerUser = _amount.div(_rewardSeats);
+        rewardSeats = _rewardSeats;
         started = false;
         finished = false;
         campaignType = _campaignType;
@@ -128,7 +136,7 @@ contract TokenRewardCampaign is Ownable, ReentrancyGuard {
         bytes32 messageDigest = getMessageDigest(msg.sender, nonce);
         address recoveredAddress = recoverSigner(messageDigest, signature);
         
-        require(recoveredAddress == governer, "Invalid signature");
+        require(recoveredAddress == msg.sender, "Invalid signature");
         require(nonce > nonces[msg.sender], "Nonce must be higher than before");
 
         nonces[msg.sender] = nonce;
@@ -155,13 +163,21 @@ contract TokenRewardCampaign is Ownable, ReentrancyGuard {
     }
     
     // Function to finish a raffle campaign
-    function finishRaffleCampaign() public onlyOwner onlyRaffle whenStarted {
+    function finishRaffleCampaign() public onlyAdmins {
         require(!finished, "Campaign already finished");
-
         finished = true;
 
-        // Request a random number
-        // randomNumberContract.getRandomNumber(block.timestamp);
+        // Pick the winners
+        for (uint i = 0; i < rewardSeats; i++) {
+            if (participants.length > 0) {
+                uint256 randomIndex = pseudoRandomNumber(participants.length);
+                winners.push(participants[randomIndex]);
+
+                // Remove the winner from the participants array to prevent them from being picked again
+                participants[randomIndex] = participants[participants.length - 1];
+                participants.pop();
+            }
+        }
 
         emit CampaignFinished();
     }
@@ -173,37 +189,26 @@ contract TokenRewardCampaign is Ownable, ReentrancyGuard {
     }
 
     // Function to claim reward for Raffle
-    function claimRaffleReward() public onlyRaffle nonReentrant returns (bool won) {
+    function claimRaffleReward() public nonReentrant returns (bool won) {
         require(finished, "Campaign not finished");
         require(isParticipant[msg.sender], "Not a participant");
         require(!hasClaimedRaffleReward[msg.sender], "Reward already claimed");
 
         uint256 rewardBalance = rewardToken.balanceOf(address(this));
-        if (rewardBalance < rewardPerUser) finished = true;
-
-        require(rewardToken.balanceOf(address(this)) >= rewardPerUser, "Not enough rewards left");
+        require(rewardBalance >= rewardPerUser, "Not enough rewards left");
         
         hasClaimedRaffleReward[msg.sender] = true;
         won = false;
 
-        // Get the random number
-        // uint256 random = randomNumberContract.randomResult();
-
-        // Select a winner based on the random number
-        // address winner = participants[random % participants.length];
-
-        // Get a pseudo-random number
-        uint256 random = pseudoRandomNumber(participants.length);
-
-        // Select a winner based on the random number
-        address winner = participants[random];
-
         // Check if the user is a winner
-        if (msg.sender == winner) {
-            rewardToken.transfer(msg.sender, rewardPerUser);
-            emit RewardClaimed(msg.sender, rewardPerUser);
+        for (uint i = 0; i < winners.length; i++) {
+            if (winners[i] == msg.sender) {
+                rewardToken.transfer(msg.sender, rewardPerUser);
+                emit RewardClaimed(msg.sender, rewardPerUser);
 
-            won = true;
+                won = true;
+                break;
+            }
         }
     }
 }
