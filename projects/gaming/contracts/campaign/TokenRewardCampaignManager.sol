@@ -9,6 +9,7 @@ import "./TokenRewardCampaign.sol";
 contract TokenRewardCampaignManager is Ownable {
     // State variables
     TokenRewardCampaign[] public campaigns;
+    mapping(address => TokenRewardCampaign[]) public campaignsByCreator;
     mapping(address => bool) public isCampaign;
 
     // Events
@@ -23,10 +24,15 @@ contract TokenRewardCampaignManager is Ownable {
         _;
     }
 
+    function getCampaignsByCreator(address creator) external view returns (TokenRewardCampaign[] memory creatorCampagins) {
+        creatorCampagins = campaignsByCreator[creator];
+    }
+
     // Function to create a new campaign
     function createCampaign(address _rewardToken, uint256 _rewardAmount, uint256 _rewardSeats, TokenRewardCampaign.CampaignType _campaignType) public {
         TokenRewardCampaign newCampaign = new TokenRewardCampaign(msg.sender, _rewardToken, _rewardAmount, _rewardSeats, _campaignType, address(this));
         campaigns.push(newCampaign);
+        campaignsByCreator[msg.sender].push(newCampaign);
         isCampaign[address(newCampaign)] = true;
 
         TransferHelper.safeApprove(
