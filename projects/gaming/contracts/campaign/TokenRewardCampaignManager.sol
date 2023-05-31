@@ -15,8 +15,6 @@ contract TokenRewardCampaignManager is Ownable {
     event CampaignCreated(address campaign);
     event CampaignApproved(address campaign);
     event CampaignDisapproved(address campaign);
-    // event CampaignStopped(address campaign);
-    // event CampaignResumed(address campaign);
 
     modifier onlyCampaignOwner(address campaignAddress) {
         TokenRewardCampaign targetCampaign = TokenRewardCampaign(campaignAddress);
@@ -47,6 +45,11 @@ contract TokenRewardCampaignManager is Ownable {
         emit CampaignCreated(address(newCampaign));
     }
 
+    function forceFinishCampaign(address campaignAddress) public onlyCampaignOwner(campaignAddress) {
+        TokenRewardCampaign newCampaign = TokenRewardCampaign(campaignAddress);
+        newCampaign.finishRaffleCampaign();
+    }
+ 
     // Function to approve a campaign
     function approveCampaign(address campaignAddress) public onlyCampaignOwner(campaignAddress) {
         require(isCampaign[campaignAddress], "Campaign does not exist");
@@ -64,22 +67,4 @@ contract TokenRewardCampaignManager is Ownable {
 
         emit CampaignDisapproved(campaignAddress);
     }
-
-    // Function to stop a campaign
-    // function stopCampaign(address campaignAddress) public onlyOwner {
-    //     require(isCampaign[campaignAddress], "Campaign does not exist");
-
-    //     Campaign(campaignAddress).stopCampaign();
-
-    //     emit CampaignStopped(campaignAddress);
-    // }
-
-    // Function to resume a campaign
-    // function resumeCampaign(address campaignAddress) public onlyOwner {
-    //     require(isCampaign[campaignAddress], "Campaign does not exist");
-
-    //     Campaign(campaignAddress).startCampaign();
-
-    //     emit CampaignResumed(campaignAddress);
-    // }
 }
