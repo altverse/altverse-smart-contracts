@@ -7,6 +7,8 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
 
+import "hardhat/console.sol";
+
 contract TokenRewardCampaign is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
 
@@ -16,6 +18,7 @@ contract TokenRewardCampaign is Ownable, ReentrancyGuard {
     mapping(address => uint256) nonces;
 
     address governer;
+    address creator;
 
     // State variables
     ERC20 public rewardToken;
@@ -61,7 +64,7 @@ contract TokenRewardCampaign is Ownable, ReentrancyGuard {
         _;
     }
 
-    constructor(address _owner, address _rewardToken, uint256 _amount, uint256 _rewardSeats, CampaignType _campaignType, address _governer) {
+    constructor(address _owner, address _rewardToken, uint256 _amount, uint256 _rewardSeats, CampaignType _campaignType, address _governer, address _creator) {
         transferOwnership(_owner);
 
         rewardToken = ERC20(_rewardToken);
@@ -71,6 +74,7 @@ contract TokenRewardCampaign is Ownable, ReentrancyGuard {
         finished = false;
         campaignType = _campaignType;
         governer = _governer;
+        creator = _creator;
     }
 
     // Function to start a campaign
@@ -103,29 +107,20 @@ contract TokenRewardCampaign is Ownable, ReentrancyGuard {
     }
 
     function recoverSigner(bytes32 message, bytes memory sig) internal pure returns (address) {
-        uint8 v;
-        bytes32 r;
-        bytes32 s;
+        (uint8 v, bytes32 r, bytes32 s) = splitSignature(sig);
+        return ecrecover(message, v, r, s);
+    }
 
-        if (sig.length != 65) {
-            return (address(0));
-        }
+    function splitSignature(bytes memory sig) internal pure returns (uint8 v, bytes32 r, bytes32 s) {
+        require(sig.length == 65, "invalid signature length");
 
         assembly {
-            r := mload(add(sig, 0x20))
-            s := mload(add(sig, 0x40))
-            v := byte(0, mload(add(sig, 0x60)))
+            r := mload(add(sig, 32))
+            s := mload(add(sig, 64))
+            v := byte(0, mload(add(sig, 96)))
         }
 
-        if (v < 27) {
-            v += 27;
-        }
-
-        if (v != 27 && v != 28) {
-            return (address(0));
-        } else {
-            return ecrecover(message, v, r, s);
-        }
+        return (v, r, s);
     }
 
     // Function to participate in a campaign
@@ -133,9 +128,15 @@ contract TokenRewardCampaign is Ownable, ReentrancyGuard {
         require(!finished, "Campaign finished");
         require(!isParticipant[msg.sender], "Already participated");
 
+        console.log("signature: " , signature);
+
         bytes32 messageDigest = getMessageDigest(msg.sender, nonce);
-        address recoveredAddress = recoverSigner(messageDigest, signature);
-        
+        console.log("messageDigest: ",  messageDigest);
+        bytes32 messageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageDigest));
+        console.log("messageHash: ",  messageHash);
+
+        address recoveredAddress = recoverSigner(messageHash, signature);
+        console.log("recoveredAddress: ", recoveredAddress);
         require(recoveredAddress == msg.sender, "Invalid signature");
         require(nonce > nonces[msg.sender], "Nonce must be higher than before");
 
