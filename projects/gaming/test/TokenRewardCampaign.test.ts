@@ -5,7 +5,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, utils } from "ethers";
 import { TokenRewardCampaign } from "../typechain-types";
 
-describe("AltNFT", () => {
+describe("TokenRewardCampaign", () => {
   let CampaignManager: TokenRewardCampaignManager;
   let Campaign: TokenRewardCampaign;
   let owner: SignerWithAddress;
@@ -45,10 +45,9 @@ describe("AltNFT", () => {
 
   describe("Participate", () => {
     it("Should set the right owner", async () => {
-      await Campaign.startCampaign();
-      await Campaign.participate(
-        BigNumber.from("1"),
-        "0x603bae2e5a19bf6d85d7d0b7e461fa3197b2975e08dcdd34d7b4e74806fc3477462bf9e19f784949c67c1f199e64bd7cef9c414669dbbf80267c77b81c139d211c"
+      await Campaign.connect(owner).startCampaign();
+      await Campaign.connect(addr1).participate(
+        "0x3c3e0e1a33f1037a2c3347f8c1950d013af7d0debe6f8665fa97429c262a5a503540778c0f6ae9fe17845ea60e79925cc05f614d7737adbc23a230090b1ee2a91c"
       );
     });
   });
