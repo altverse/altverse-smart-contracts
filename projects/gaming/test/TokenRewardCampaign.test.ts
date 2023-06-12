@@ -63,7 +63,7 @@ describe("TokenRewardCampaign", () => {
         user: user.address,
       };
 
-      const signature = await user._signTypedData(domain, types, value);
+      const signature = await owner._signTypedData(domain, types, value);
       await Campaign.connect(owner).startCampaign();
       await Campaign.connect(user).participate({ user: user.address }, signature);
     });
