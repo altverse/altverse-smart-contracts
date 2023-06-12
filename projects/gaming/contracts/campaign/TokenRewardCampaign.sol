@@ -6,16 +6,19 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import '@uniswap/v3-periphery/contracts/libraries/TransferHelper.sol';
+import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 
-contract TokenRewardCampaign is Ownable, ReentrancyGuard {
+import "hardhat/console.sol";
+
+contract TokenRewardCampaign is Ownable, ReentrancyGuard, EIP712 {
+    using ECDSA for bytes32;
     using SafeMath for uint256;
 
     enum CampaignType { FCFS, Raffle }
     CampaignType public campaignType;
 
-    mapping(address => uint256) nonces;
-
     address governer;
+    address creator;
 
     // State variables
     ERC20 public rewardToken;
@@ -40,6 +43,11 @@ contract TokenRewardCampaign is Ownable, ReentrancyGuard {
     event CampaignFinished();
     event UserParticipated(address user);
     event RewardClaimed(address user, uint256 amount);
+    
+    struct ParticipationData {
+        address user;
+    }
+    bytes32 internal constant TYPEHASH = keccak256("ParticipationData(address user)");
 
     modifier onlyRaffle {
         require(campaignType == CampaignType.Raffle, "Not a raffle campaign");
@@ -61,7 +69,9 @@ contract TokenRewardCampaign is Ownable, ReentrancyGuard {
         _;
     }
 
-    constructor(address _owner, address _rewardToken, uint256 _amount, uint256 _rewardSeats, CampaignType _campaignType, address _governer) {
+    constructor(address _owner, address _rewardToken, uint256 _amount, uint256 _rewardSeats, CampaignType _campaignType, address _governer, address _creator)
+        EIP712("TokenRewardCampaign", "1") 
+    {
         transferOwnership(_owner);
 
         rewardToken = ERC20(_rewardToken);
@@ -71,6 +81,7 @@ contract TokenRewardCampaign is Ownable, ReentrancyGuard {
         finished = false;
         campaignType = _campaignType;
         governer = _governer;
+        creator = _creator;
     }
 
     // Function to start a campaign
@@ -98,48 +109,11 @@ contract TokenRewardCampaign is Ownable, ReentrancyGuard {
         rewardToken.transfer(owner(), balance);
     }
 
-    function getMessageDigest(address user, uint256 nonce) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(user, nonce));
-    }
-
-    function recoverSigner(bytes32 message, bytes memory sig) internal pure returns (address) {
-        uint8 v;
-        bytes32 r;
-        bytes32 s;
-
-        if (sig.length != 65) {
-            return (address(0));
-        }
-
-        assembly {
-            r := mload(add(sig, 0x20))
-            s := mload(add(sig, 0x40))
-            v := byte(0, mload(add(sig, 0x60)))
-        }
-
-        if (v < 27) {
-            v += 27;
-        }
-
-        if (v != 27 && v != 28) {
-            return (address(0));
-        } else {
-            return ecrecover(message, v, r, s);
-        }
-    }
-
     // Function to participate in a campaign
-    function participate(uint256 nonce, bytes memory signature) public whenStarted nonReentrant {
+    function participate(ParticipationData calldata data, bytes calldata signature) public whenStarted nonReentrant {
         require(!finished, "Campaign finished");
         require(!isParticipant[msg.sender], "Already participated");
-
-        bytes32 messageDigest = getMessageDigest(msg.sender, nonce);
-        address recoveredAddress = recoverSigner(messageDigest, signature);
-        
-        require(recoveredAddress == msg.sender, "Invalid signature");
-        require(nonce > nonces[msg.sender], "Nonce must be higher than before");
-
-        nonces[msg.sender] = nonce;
+        require(verifySignature(msg.sender, data, signature), "Invalid signature"); 
 
         totalParticipants += 1;
         participants.push(msg.sender);
@@ -161,7 +135,17 @@ contract TokenRewardCampaign is Ownable, ReentrancyGuard {
             }
         }
     }
-    
+
+    function verifySignature(address _signer, ParticipationData calldata _data, bytes calldata _signature) public view returns (bool) {
+        bytes32 digest = _hashTypedDataV4(keccak256(abi.encode(
+            TYPEHASH,
+            _data.user
+        )));
+
+        return _signer == digest.recover(_signature);
+    }
+
+
     // Function to finish a raffle campaign
     function finishRaffleCampaign() public onlyAdmins {
         require(!finished, "Campaign already finished");

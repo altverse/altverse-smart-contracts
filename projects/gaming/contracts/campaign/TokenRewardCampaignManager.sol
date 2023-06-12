@@ -30,7 +30,7 @@ contract TokenRewardCampaignManager is Ownable {
 
     // Function to create a new campaign
     function createCampaign(address _rewardToken, uint256 _rewardAmount, uint256 _rewardSeats, TokenRewardCampaign.CampaignType _campaignType) public {
-        TokenRewardCampaign newCampaign = new TokenRewardCampaign(msg.sender, _rewardToken, _rewardAmount, _rewardSeats, _campaignType, address(this));
+        TokenRewardCampaign newCampaign = new TokenRewardCampaign(msg.sender, _rewardToken, _rewardAmount, _rewardSeats, _campaignType, address(this), owner());
         campaigns.push(newCampaign);
         campaignsByCreator[msg.sender].push(newCampaign);
         isCampaign[address(newCampaign)] = true;
