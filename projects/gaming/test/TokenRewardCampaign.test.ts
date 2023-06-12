@@ -4,13 +4,14 @@ import { TokenRewardCampaignManager } from "../typechain";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, utils } from "ethers";
 import { TokenRewardCampaign } from "../typechain-types";
+import hre from "hardhat";
 
 describe("TokenRewardCampaign", () => {
   let CampaignManager: TokenRewardCampaignManager;
   let Campaign: TokenRewardCampaign;
   let owner: SignerWithAddress;
-  let addr1: SignerWithAddress;
   let addrs: SignerWithAddress[];
+  let addr1: SignerWithAddress;
 
   beforeEach(async () => {
     [owner, addr1, ...addrs] = await ethers.getSigners();
@@ -44,11 +45,27 @@ describe("TokenRewardCampaign", () => {
   });
 
   describe("Participate", () => {
-    it("Should set the right owner", async () => {
+    it("Should participate with right signature", async () => {
+      const user = addrs[3];
+
+      const domain = {
+        name: "TokenRewardCampaign",
+        version: "1",
+        chainId: hre.network.config.chainId,
+        verifyingContract: Campaign.address,
+      };
+
+      const types = {
+        ParticipationData: [{ name: "user", type: "address" }],
+      };
+
+      const value = {
+        user: user.address,
+      };
+
+      const signature = await user._signTypedData(domain, types, value);
       await Campaign.connect(owner).startCampaign();
-      await Campaign.connect(addr1).participate(
-        "0x3c3e0e1a33f1037a2c3347f8c1950d013af7d0debe6f8665fa97429c262a5a503540778c0f6ae9fe17845ea60e79925cc05f614d7737adbc23a230090b1ee2a91c"
-      );
+      await Campaign.connect(user).participate({ user: user.address }, signature);
     });
   });
 });

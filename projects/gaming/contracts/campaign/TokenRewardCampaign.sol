@@ -10,6 +10,7 @@ import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 
 import "hardhat/console.sol";
 
+
 contract TokenRewardCampaign is Ownable, ReentrancyGuard, EIP712 {
     using ECDSA for bytes32;
     using SafeMath for uint256;
@@ -113,7 +114,7 @@ contract TokenRewardCampaign is Ownable, ReentrancyGuard, EIP712 {
     function participate(ParticipationData calldata data, bytes calldata signature) public whenStarted nonReentrant {
         require(!finished, "Campaign finished");
         require(!isParticipant[msg.sender], "Already participated");
-        require(verifySignature(msg.sender, data, signature), "Invalid signature"); 
+        require(verifySignature(data, signature), "Invalid signature"); 
 
         totalParticipants += 1;
         participants.push(msg.sender);
@@ -136,13 +137,13 @@ contract TokenRewardCampaign is Ownable, ReentrancyGuard, EIP712 {
         }
     }
 
-    function verifySignature(address _signer, ParticipationData calldata _data, bytes calldata _signature) public view returns (bool) {
+    function verifySignature(ParticipationData calldata _data, bytes calldata _signature) public view returns (bool) {
         bytes32 digest = _hashTypedDataV4(keccak256(abi.encode(
             TYPEHASH,
             _data.user
         )));
 
-        return _signer == digest.recover(_signature);
+        return msg.sender == digest.recover(_signature);
     }
 
 
