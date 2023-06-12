@@ -143,7 +143,7 @@ contract TokenRewardCampaign is Ownable, ReentrancyGuard, EIP712 {
             _data.user
         )));
 
-        return msg.sender == digest.recover(_signature);
+        return owner() == digest.recover(_signature) && _data.user == msg.sender;
     }
 
 
