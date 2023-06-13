@@ -11,35 +11,35 @@ describe("TokenRewardCampaign", () => {
   let Campaign: TokenRewardCampaign;
   let owner: SignerWithAddress;
   let addrs: SignerWithAddress[];
-  let addr1: SignerWithAddress;
+  let creator: SignerWithAddress;
 
   beforeEach(async () => {
-    [owner, addr1, ...addrs] = await ethers.getSigners();
+    [owner, creator, ...addrs] = await ethers.getSigners();
 
     const ERC20TokenFactory = await ethers.getContractFactory("ERC20");
     const ERC20 = await ERC20TokenFactory.deploy("TOKEN", "TKN");
 
     // Prepare contract fixture
     const CampaignManagerFactory = await ethers.getContractFactory("TokenRewardCampaignManager");
-    CampaignManager = await CampaignManagerFactory.connect(owner).deploy();
+    CampaignManager = await CampaignManagerFactory.connect(creator).deploy();
     await CampaignManager.deployed();
 
     const CampaignFactory = await ethers.getContractFactory("TokenRewardCampaign");
-    Campaign = await CampaignFactory.connect(owner).deploy(
+    Campaign = await CampaignFactory.connect(creator).deploy(
       owner.address,
       ERC20.address,
       ethers.utils.parseUnits("1000", 18),
       BigNumber.from("10"),
       BigNumber.from("1"),
       owner.address,
-      owner.address
+      creator.address
     );
     await Campaign.deployed();
   });
 
   describe("Deployment", () => {
     it("Should set the right owner", async () => {
-      expect(await CampaignManager.owner()).to.equal(await owner.getAddress());
+      expect(await CampaignManager.owner()).to.equal(await creator.getAddress());
       expect(await Campaign.owner()).to.equal(await owner.getAddress());
     });
   });
@@ -63,9 +63,9 @@ describe("TokenRewardCampaign", () => {
         user: user.address,
       };
 
-      const signature = await owner._signTypedData(domain, types, value);
+      const signature = await creator._signTypedData(domain, types, value);
       await Campaign.connect(owner).startCampaign();
-      await Campaign.connect(user).participate({ user: user.address }, signature);
+      expect(Campaign.connect(user).participate({ user: user.address }, signature)).not.to.be.reverted;
     });
   });
 });
