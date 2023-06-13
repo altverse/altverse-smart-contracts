@@ -196,4 +196,12 @@ contract TokenRewardCampaign is Ownable, ReentrancyGuard, EIP712 {
             }
         }
     }
+
+    function getParticipants() external view returns (address[] memory) {
+        return participants;
+    }  
+
+    function getWinners() external view returns (address[] memory) {
+        return winners;
+    } 
 }
