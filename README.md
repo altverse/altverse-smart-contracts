@@ -16,18 +16,18 @@ Escrow Standard Contract (StandardEscrow.sol) `0x45249cC580b465D4C8bd55BE3856c56
 
 ## Gaming Space
 ### BNB Testnet
-Deployed with: `0x44988Fd0C8d026AfE4b1594e55Dfa141a804BCC0`  
-Contract (PAT): `0x02bc5dd9894c1f38EB091E2F11A75A9eE77d7E78`  
+Deployed with: `0x44988Fd0C8d026AfE4b1594e55Dfa141a804BCC0`   
+Contract (PAT): `0x02bc5dd9894c1f38EB091E2F11A75A9eE77d7E78`    
 
 ### BNB 
-Deployed with: `0x44988Fd0C8d026AfE4b1594e55Dfa141a804BCC0`
-Contract (TokenReward): `0x965cbC749A8725eA98815bdb6FE8ec20aa75770e`  
+Deployed with: `0x44988Fd0C8d026AfE4b1594e55Dfa141a804BCC0`  
+Contract (TokenReward): `0x965cbC749A8725eA98815bdb6FE8ec20aa75770e`    
 
 ### Polygon
 Deployed with: `0x44988Fd0C8d026AfE4b1594e55Dfa141a804BCC0`  
 Contract (PAT): `0xA8581d7064610F23d3454894C7380eb99740F3e7`  
 
-### Arbitrum
+### Arbitrum 
 Deployed with: `0x44988Fd0C8d026AfE4b1594e55Dfa141a804BCC0`  
-Contract (PAT): `0xa360e34baE7273cCB5d4a15e2C230E5d81441FD8` 
-Contract (TokenReward): `0x3Ac99803FDe05F46B467d0D36C3C5326b141cE79`  
+Contract (PAT): `0xa360e34baE7273cCB5d4a15e2C230E5d81441FD8`  
+Contract (TokenReward): `0x3Ac99803FDe05F46B467d0D36C3C5326b141cE79`   
