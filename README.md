@@ -17,7 +17,8 @@ Escrow Standard Contract (StandardEscrow.sol) `0x45249cC580b465D4C8bd55BE3856c56
 ## Gaming Space
 ### BNB Testnet
 Deployed with: `0x44988Fd0C8d026AfE4b1594e55Dfa141a804BCC0`   
-Contract (PAT): `0x02bc5dd9894c1f38EB091E2F11A75A9eE77d7E78`    
+Contract (PAT): `0x02bc5dd9894c1f38EB091E2F11A75A9eE77d7E78`  
+Contract (TokenReward): `0xC7C86e9C9991f2ef876fb15473AdaA2514d39Ab2`    
 
 ### BNB 
 Deployed with: `0x44988Fd0C8d026AfE4b1594e55Dfa141a804BCC0`  
