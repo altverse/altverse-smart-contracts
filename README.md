@@ -15,12 +15,12 @@ Escrow Factory Contract (ArbitrableEscrowFactory.sol): `0x934d585d8A1b9A8C7aEc4b
 Escrow Standard Contract (StandardEscrow.sol) `0x45249cC580b465D4C8bd55BE3856c5630D0C7b03`
 
 ## Gaming Space
-### BNB Testnet
+### BSC Testnet
 Deployed with: `0x44988Fd0C8d026AfE4b1594e55Dfa141a804BCC0`   
 Contract (PAT): `0x02bc5dd9894c1f38EB091E2F11A75A9eE77d7E78`  
 Contract (TokenReward): `0xC7C86e9C9991f2ef876fb15473AdaA2514d39Ab2`    
 
-### BNB 
+### BSC Mainnet
 Deployed with: `0x44988Fd0C8d026AfE4b1594e55Dfa141a804BCC0`  
 Contract (TokenReward): `0x965cbC749A8725eA98815bdb6FE8ec20aa75770e`    
 
