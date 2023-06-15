@@ -24,6 +24,10 @@ Contract (TokenReward): `0xC7C86e9C9991f2ef876fb15473AdaA2514d39Ab2`
 Deployed with: `0x44988Fd0C8d026AfE4b1594e55Dfa141a804BCC0`  
 Contract (TokenReward): `0x965cbC749A8725eA98815bdb6FE8ec20aa75770e`    
 
+### Polygon Mumbai
+Deployed with: `0x44988Fd0C8d026AfE4b1594e55Dfa141a804BCC0`  
+Contract (TokenReward): `0x11866C1E77f25b95D2f812CC642ee9a9B6655d9a`    
+
 ### Polygon
 Deployed with: `0x44988Fd0C8d026AfE4b1594e55Dfa141a804BCC0`  
 Contract (PAT): `0xA8581d7064610F23d3454894C7380eb99740F3e7`  
