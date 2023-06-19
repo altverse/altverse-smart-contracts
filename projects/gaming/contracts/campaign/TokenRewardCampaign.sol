@@ -115,7 +115,7 @@ contract TokenRewardCampaign is Ownable, ReentrancyGuard, EIP712 {
         require(!finished, "Campaign finished");
         require(!isParticipant[msg.sender], "Already participated");
         require(verifySignature(data, signature), "Invalid signature"); 
-
+        
         totalParticipants += 1;
         participants.push(msg.sender);
         isParticipant[msg.sender] = true;
