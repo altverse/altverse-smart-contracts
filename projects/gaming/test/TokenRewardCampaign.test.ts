@@ -49,7 +49,7 @@ describe("TokenRewardCampaign", () => {
       const user = addrs[3];
 
       const domain = {
-        name: "TokenRewardCampaign",
+        name: "NFTRewardCampaign",
         version: "1",
         chainId: hre.network.config.chainId,
         verifyingContract: Campaign.address,
