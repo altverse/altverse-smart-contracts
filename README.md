@@ -27,10 +27,12 @@ Contract (TokenReward): `0x965cbC749A8725eA98815bdb6FE8ec20aa75770e`
 ### Polygon Mumbai
 Deployed with: `0x44988Fd0C8d026AfE4b1594e55Dfa141a804BCC0`  
 Contract (TokenReward): `0x11866C1E77f25b95D2f812CC642ee9a9B6655d9a`    
+Contract (NFTReward): `0x92B67b6A2793d25cC9BCC59Ac4521ab30D9363c8`  
 
 ### Polygon
 Deployed with: `0x44988Fd0C8d026AfE4b1594e55Dfa141a804BCC0`  
 Contract (PAT): `0xA8581d7064610F23d3454894C7380eb99740F3e7`  
+Contract (NFTReward): `0x606df21fF6f5Cb55A6B6EF3d960cc6C15820581c`  
 
 ### Arbitrum 
 Deployed with: `0x44988Fd0C8d026AfE4b1594e55Dfa141a804BCC0`  
