@@ -3,7 +3,9 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -13,7 +15,7 @@ import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import "hardhat/console.sol";
 
 
-contract NFTRewardCampaign is Ownable, ReentrancyGuard, EIP712 {
+contract NFTRewardCampaign is Ownable, ReentrancyGuard, EIP712, IERC721Receiver, IERC1155Receiver  {
     using ECDSA for bytes32;
     using SafeMath for uint256;
 
@@ -26,10 +28,10 @@ contract NFTRewardCampaign is Ownable, ReentrancyGuard, EIP712 {
     address creator;
 
     // State variables
-    address nftAddress;
-    uint256[] tokenIds;
-    TokenType tokenType;
-    uint256 rewardAmount; // Only used for ERC1155
+    address public nftAddress;
+    uint256[] public tokenIds;
+    TokenType public tokenType;
+    uint256 public rewardAmount; // Only used for ERC1155
     bool public started;
     bool public finished;
     uint256 public totalParticipants;
@@ -279,4 +281,44 @@ contract NFTRewardCampaign is Ownable, ReentrancyGuard, EIP712 {
     function getWinners() external view returns (address[] memory) {
         return winners;
     } 
+
+    function onERC721Received(address, address, uint256, bytes calldata)
+        external pure override returns(bytes4) {
+        return this.onERC721Received.selector;
+    }
+
+    function onERC1155Received(
+        address,
+        address,
+        uint256,
+        uint256,
+        bytes calldata
+    )
+        external
+        pure
+        override
+        returns(bytes4)
+    {
+        return this.onERC1155Received.selector;
+    }
+
+    function onERC1155BatchReceived(
+        address,
+        address,
+        uint256[] calldata,
+        uint256[] calldata,
+        bytes calldata
+    )
+        external
+        pure
+        override
+        returns(bytes4)
+    {
+        return this.onERC1155BatchReceived.selector;
+    }
+    
+    function supportsInterface(bytes4 interfaceId) public pure override(IERC165) returns (bool) {
+        return interfaceId == type(IERC721Receiver).interfaceId
+            || interfaceId == type(IERC1155Receiver).interfaceId;
+    }
 }

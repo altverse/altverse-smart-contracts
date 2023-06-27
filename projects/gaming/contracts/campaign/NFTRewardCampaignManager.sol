@@ -40,8 +40,8 @@ contract NFTRewardCampaignManager is Ownable {
 
             // Transfer each NFT from campaign creator to contract
             for (uint256 i = 0; i < _tokenIds.length; i++) {
-                nftContract.approve(address(newCampaign), _tokenIds[i]);               
                 nftContract.transferFrom(msg.sender, address(this), _tokenIds[i]);
+                nftContract.safeTransferFrom(address(this), address(newCampaign), _tokenIds[i]);
             }
         } 
         else if (_tokenType == NFTRewardCampaign.TokenType.ERC1155) {
@@ -52,7 +52,11 @@ contract NFTRewardCampaignManager is Ownable {
             // Transfer each token from campaign creator to contract
             for (uint256 i = 0; i < _tokenIds.length; i++) {
                 nftContract.safeTransferFrom(msg.sender, address(this), _tokenIds[i], _amount, "");
+                nftContract.safeTransferFrom(address(this), address(newCampaign), _tokenIds[i], _amount, "");
             }
+            
+            // Revoke approval to prevent unintended transfers
+            nftContract.setApprovalForAll(address(newCampaign), false);
         }
 
         require(_rewardSeats == _tokenIds.length, "Reward seat not match rewards amount");

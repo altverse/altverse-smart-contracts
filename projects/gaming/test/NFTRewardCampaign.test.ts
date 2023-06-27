@@ -89,39 +89,40 @@ describe("TokenRewardCampaign", () => {
 
   describe("Creation", () => {
     it("Should create campaign", async () => {
-      const user = addrs[3];
-
       // Mint a NFT
-      // await MockNFTContract.connect(creator).mint(user.address, 1);
-      // await MockNFTContract.connect(user).approve(CampaignContract.address, 1);
+      await MockNFTContract.connect(creator).mint(owner.address, 2);
+      await MockNFTContract.connect(owner).approve(CampaignManager.address, 2);
 
-      // await CampaignContract.connect(user).createCampaign(MockNFTContract.address, [1], 1, 0);
+      await CampaignManager.connect(owner).createCampaign(MockNFTContract.address, [2], 1, 0, 1, 0);
 
-      // const campaignId = await CampaignContract.campaignsByOwner(user.address, 0);
-      // const createdCampaign = await CampaignContract.campaigns(campaignId);
+      const createdCampaignAddress = await CampaignManager.campaigns(0);
 
-      // expect(createdCampaign.nftAddress).to.equal(MockNFTContract.address);
-      // expect(createdCampaign.rewardAmount).to.equal(1);
-      // expect(createdCampaign.owner).to.equal(user.address);
+      const createdCampaign = await ethers.getContractAt("NFTRewardCampaign", createdCampaignAddress, creator);
+      expect(await createdCampaign.nftAddress()).to.equal(MockNFTContract.address);
+      expect(await createdCampaign.rewardAmount()).to.equal(1);
+      expect(await createdCampaign.owner()).to.equal(owner.address);
     });
 
-    it("Should withdraw correctly with emergency withdraw", async () => {
-      const user = addrs[3];
-
+    it("Should withdraw correctly with withdraw", async () => {
       // Mint a NFT
-      // await MockNFTContract.connect(creator).mint(user.address, 1);
-      // await MockNFTContract.connect(user).approve(Campaign.address, 1);
+      await MockNFTContract.connect(creator).mint(owner.address, 2);
+      await MockNFTContract.connect(owner).approve(CampaignManager.address, 2);
 
-      // expect(await MockNFTContract.ownerOf(1)).to.be.equal(user.address);
+      expect(await MockNFTContract.ownerOf(2)).to.be.equal(owner.address);
 
-      // await Campaign.connect(user).createCampaign(MockNFTContract.address, [1], 1, 0);
+      await CampaignManager.connect(owner).createCampaign(MockNFTContract.address, [2], 1, 0, 1, 0);
 
-      // expect(await MockNFTContract.ownerOf(1)).to.be.equal(Campaign.address);
+      const createdCampaignAddress = await CampaignManager.campaigns(0);
+      const createdCampaign = await ethers.getContractAt("NFTRewardCampaign", createdCampaignAddress, creator);
 
-      // const campaignId = await Campaign.campaignsByOwner(user.address, 0);
-      // await Campaign.connect(creator).emergencyWithdraw(campaignId);
+      await createdCampaign.connect(owner).startCampaign();
 
-      // expect(await MockNFTContract.ownerOf(1)).to.be.equal(user.address);
+      expect(await MockNFTContract.ownerOf(2)).to.be.equal(createdCampaign.address);
+
+      await createdCampaign.connect(owner).stopCampaign();
+      await createdCampaign.connect(owner).withdrawRewards();
+
+      expect(await MockNFTContract.ownerOf(2)).to.be.equal(owner.address);
     });
   });
 });
