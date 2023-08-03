@@ -41,16 +41,14 @@ describe("AltNFT", () => {
     it("Should set the max claimable count for a tokenId and wallet", async () => {
       const tokenId = 1;
       const count = 10;
-      await AltNFTContract.setMaxClaimableCount(tokenId, await addr1.getAddress(), count);
-      expect(await AltNFTContract.maxClaimableCount(tokenId, await addr1.getAddress())).to.equal(count);
+      await AltNFTContract.setMaxClaimableCount(tokenId, count);
+      expect(await AltNFTContract.maxClaimableCount(tokenId)).to.equal(count);
     });
 
     it("Should only allow the owner or token minter to set the max claimable count", async () => {
       const tokenId = 1;
       const count = 10;
-      await expect(
-        AltNFTContract.connect(addr1).setMaxClaimableCount(tokenId, await addr1.getAddress(), count)
-      ).to.be.revertedWith("Not authorized");
+      await expect(AltNFTContract.connect(addr1).setMaxClaimableCount(tokenId, count)).to.be.revertedWith("Not authorized");
     });
   });
 
@@ -59,7 +57,7 @@ describe("AltNFT", () => {
       const tokenId = 1;
       const quantity = 5;
       const count = 10;
-      await AltNFTContract.setMaxClaimableCount(tokenId, await addr1.getAddress(), count);
+      await AltNFTContract.setMaxClaimableCount(tokenId, count);
       await AltNFTContract.connect(addr1).claim(await addr1.getAddress(), tokenId, quantity);
       expect(await AltNFTContract.balanceOf(await addr1.getAddress(), tokenId)).to.equal(quantity);
     });
@@ -68,7 +66,7 @@ describe("AltNFT", () => {
       const tokenId = 1;
       const quantity = 15;
       const count = 10;
-      await AltNFTContract.setMaxClaimableCount(tokenId, await addr1.getAddress(), count);
+      await AltNFTContract.setMaxClaimableCount(tokenId, count);
       await expect(AltNFTContract.connect(addr1).claim(await addr1.getAddress(), tokenId, quantity)).to.be.revertedWith(
         "Claim exceeds max allowed"
       );
